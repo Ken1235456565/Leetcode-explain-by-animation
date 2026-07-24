@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>接雨水 · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --bar: #e8eef4;
+    --bar-dim: #4a5580;
+    --water: #5bc0eb;
+    --water-glow: #8fd8f5;
+    --left-color: #3ddc97;
+    --right-color: #f9a826;
+    --accent: #5bc0eb;
+    --danger: #f96e6e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 6px 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 18px;
+    margin-top: 22px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 12px;
+  }
+
+  /* SVG stage */
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: #1a2350;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: var(--water-glow); }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px;
+    padding: 13px 15px;
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    min-height: 78px;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  @media (max-width: 560px) {
+    .chips { grid-template-columns: repeat(2, 1fr); }
+  }
+  .chip {
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .chip .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+  }
+  .chip .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.ans .value { color: var(--water); }
+
+  /* code panel */
+  .code-box {
+    background: #0a1130;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.85;
+    overflow-x: auto;
+  }
+  .line {
+    display: flex;
+    padding: 0 14px;
+    white-space: pre;
+    border-left: 3px solid transparent;
+    color: #a9b4d6;
+  }
+  .line .ln {
+    width: 26px;
+    flex: 0 0 26px;
+    color: #4a5580;
+    user-select: none;
+  }
+  .line.active {
+    background: rgba(91, 192, 235, 0.12);
+    border-left: 3px solid var(--accent);
+    color: var(--ink);
+  }
+  .line.active .ln { color: var(--accent); }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Two Pointers · O(n) / O(1)</div>
+    <h1>接雨水 —— 双指针算法分步演示</h1>
+    <div class="sub">柱状图与源代码同步高亮，展示 left / right 指针每一步的移动过程，以及 pre_max、suf_max 与累计雨水量 ans 的变化。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>柱状图演示</h2>
+      <svg class="stage-svg" viewBox="0 0 920 320" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--bar)"></i>柱子</span>
+        <span><i class="dot" style="background:var(--water)"></i>本次及之前累计的雨水</span>
+        <span><i class="dot" style="background:var(--left-color)"></i>left 指针</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right 指针</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip"><div class="label">PRE_MAX</div><div class="value" id="chip-pre">-</div></div>
+        <div class="chip"><div class="label">SUF_MAX</div><div class="value" id="chip-suf">-</div></div>
+        <div class="chip ans"><div class="label">ANS</div><div class="value" id="chip-ans">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const heights = [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1];
+
+  const codeLines = [
+    "# 其他语言的实现，见视频简介",
+    "class Solution:",
+    "    def trap(self, height: List[int]) -> int:",
+    "        # 时间复杂度 O(n)",
+    "        # 空间复杂度 O(1)",
+    "        n = len(height)",
+    "        ans = 0",
+    "        left = 0",
+    "        right = n - 1",
+    "        pre_max = 0",
+    "        suf_max = 0",
+    "        while left <= right:",
+    "            pre_max = max(pre_max, height[left])",
+    "            suf_max = max(suf_max, height[right])",
+    "            if pre_max < suf_max:",
+    "                ans += pre_max - height[left]",
+    "                left += 1",
+    "            else:",
+    "                ans += suf_max - height[right]",
+    "                right -= 1",
+    "        return ans"
+  ];
+
+  function simulate(height) {
+    const n = height.length;
+    const steps = [];
+    let left = 0, right = n - 1, preMax = 0, sufMax = 0, ans = 0;
+    let filled = {};
+
+    steps.push({
+      type: "init", left, right, preMax, sufMax, ans,
+      filled: Object.assign({}, filled),
+      lines: [6, 7, 8, 9, 10, 11],
+      desc: "初始化：left 指向数组开头，right 指向数组末尾，pre_max、suf_max、ans 均从 0 开始。"
+    });
+
+    while (left <= right) {
+      preMax = Math.max(preMax, height[left]);
+      sufMax = Math.max(sufMax, height[right]);
+
+      if (preMax < sufMax) {
+        const idx = left;
+        const added = preMax - height[idx];
+        ans += added;
+        filled = Object.assign({}, filled, { [idx]: added });
+        steps.push({
+          type: "iter", branch: "left",
+          left, right, preMax, sufMax, index: idx, added, ans,
+          filled: Object.assign({}, filled),
+          lines: [13, 14, 15, 16, 17],
+          desc: "pre_max(" + preMax + ") 小于 suf_max(" + sufMax + ")，说明 left 一侧的最大高度较矮，位置 " +
+                idx + " 的水位由 pre_max 决定。该位置增加 " + added + " 单位雨水，随后 left 右移一位。"
+        });
+        left += 1;
+      } else {
+        const idx = right;
+        const added = sufMax - height[idx];
+        ans += added;
+        filled = Object.assign({}, filled, { [idx]: added });
+        steps.push({
+          type: "iter", branch: "right",
+          left, right, preMax, sufMax, index: idx, added, ans,
+          filled: Object.assign({}, filled),
+          lines: [13, 14, 15, 18, 19, 20],
+          desc: "pre_max(" + preMax + ") 大于等于 suf_max(" + sufMax + ")，说明 right 一侧的最大高度不占优，位置 " +
+                idx + " 的水位由 suf_max 决定。该位置增加 " + added + " 单位雨水，随后 right 左移一位。"
+        });
+        right -= 1;
+      }
+    }
+
+    steps.push({
+      type: "final", ans,
+      filled: Object.assign({}, filled),
+      lines: [21],
+      desc: "left 超过 right，循环结束，最终返回 ans = " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  const steps = simulate(heights);
+  let current = 0;
+  let playTimer = null;
+
+  // ---- code panel ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((n) => {
+      const el = document.getElementById("line-" + n);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- SVG stage geometry ----
+  const n = heights.length;
+  const barW = 50, gap = 20, startX = 40;
+  const baseline = 240, unit = 50;
+  const maxH = Math.max(...heights);
+
+  function barX(i) { return startX + i * (barW + gap); }
+  function barTopY(h) { return baseline - h * unit; }
+
+  function renderStage(step) {
+    const parts = [];
+
+    // dashed pre_max / suf_max guide lines
+    const leftIdx = step.left !== undefined ? step.left : 0;
+    const rightIdx = step.right !== undefined ? step.right : n - 1;
+    const preMax = step.preMax || 0;
+    const sufMax = step.sufMax || 0;
+
+    if (step.type !== "final") {
+      const preY = barTopY(preMax);
+      const sufY = barTopY(sufMax);
+      const preLineEndX = barX(leftIdx) + barW / 2;
+      const sufLineStartX = barX(rightIdx) + barW / 2;
+
+      parts.push(
+        '<line x1="' + startX + '" y1="' + preY + '" x2="' + preLineEndX + '" y2="' + preY +
+        '" stroke="' + "#3ddc97" + '" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.75"/>'
+      );
+      parts.push(
+        '<text x="' + (startX + 4) + '" y="' + (preY - 6) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="#3ddc97">pre_max=' + preMax + '</text>'
+      );
+
+      const stageRightX = barX(n - 1) + barW;
+      parts.push(
+        '<line x1="' + sufLineStartX + '" y1="' + sufY + '" x2="' + stageRightX + '" y2="' + sufY +
+        '" stroke="' + "#f9a826" + '" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.75"/>'
+      );
+      parts.push(
+        '<text x="' + (stageRightX - 4) + '" y="' + (sufY - 6) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="#f9a826" text-anchor="end">suf_max=' + sufMax + '</text>'
+      );
+    }
+
+    // bars + water
+    for (let i = 0; i < n; i++) {
+      const x = barX(i);
+      const h = heights[i];
+      const y = barTopY(h);
+      const isCurrent = step.type === "iter" && step.index === i;
+
+      parts.push(
+        '<rect x="' + x + '" y="' + y + '" width="' + barW + '" height="' + (baseline - y) +
+        '" fill="var(--bar)" opacity="' + (isCurrent ? "1" : "0.88") + '" rx="2"/>'
+      );
+
+      const filledAmt = step.filled ? step.filled[i] : undefined;
+      if (filledAmt && filledAmt > 0) {
+        const waterTopY = y - filledAmt * unit;
+        parts.push(
+          '<rect x="' + x + '" y="' + waterTopY + '" width="' + barW + '" height="' + (filledAmt * unit) +
+          '" fill="var(--water)" opacity="' + (isCurrent ? "0.95" : "0.55") + '" rx="2"/>'
+        );
+      }
+
+      if (isCurrent) {
+        parts.push(
+          '<rect x="' + (x - 2) + '" y="' + (y - 2) + '" width="' + (barW + 4) + '" height="' + (baseline - y + 4) +
+          '" fill="none" stroke="var(--water-glow)" stroke-width="2" rx="4"/>'
+        );
+      }
+
+      parts.push(
+        '<text x="' + (x + barW / 2) + '" y="' + (baseline + 16) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="#93a1c2" text-anchor="middle">' + h + '</text>'
+      );
+    }
+
+    // pointer arrows
+    if (step.type !== "final") {
+      const ly = baseline + 34;
+      const lx = barX(leftIdx) + barW / 2;
+      parts.push(
+        '<text x="' + lx + '" y="' + ly + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="#3ddc97" text-anchor="middle">▲</text>'
+      );
+      parts.push(
+        '<text x="' + lx + '" y="' + (ly + 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="#3ddc97" text-anchor="middle">left</text>'
+      );
+
+      const rx = barX(rightIdx) + barW / 2;
+      parts.push(
+        '<text x="' + rx + '" y="' + ly + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="#f9a826" text-anchor="middle">▲</text>'
+      );
+      parts.push(
+        '<text x="' + rx + '" y="' + (ly + 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="#f9a826" text-anchor="middle">right</text>'
+      );
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = step.right !== undefined ? step.right : "—";
+    document.getElementById("chip-pre").textContent = step.preMax !== undefined ? step.preMax : "—";
+    document.getElementById("chip-suf").textContent = step.sufMax !== undefined ? step.sufMax : "—";
+    document.getElementById("chip-ans").textContent = step.ans !== undefined ? step.ans : 0;
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+      document.getElementById("btn-play").textContent = "播放";
+    }
+  }
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay();
+    if (current > 0) { current--; render(); }
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay();
+    current = 0;
+    render();
+  });
+
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) {
+        current++;
+        render();
+      } else {
+        stopPlay();
+      }
+    }, 1400);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

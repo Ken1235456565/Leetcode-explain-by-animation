@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>两数之和 II · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --left-color: #3ddc97;
+    --right-color: #f9a826;
+    --gt: #f96e6e;
+    --lt: #5bc0eb;
+    --eq: #6ee7a0;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 6px 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 18px;
+    margin-top: 22px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: #1a2350;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px;
+    padding: 13px 15px;
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    min-height: 78px;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  @media (max-width: 560px) {
+    .chips { grid-template-columns: repeat(2, 1fr); }
+  }
+  .chip {
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+  .chip .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+  }
+  .chip .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.sum .value { color: var(--accent); }
+  .chip.result .value { color: var(--eq); }
+
+  .code-box {
+    background: #0a1130;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.85;
+    overflow-x: auto;
+  }
+  .line {
+    display: flex;
+    padding: 0 14px;
+    white-space: pre;
+    border-left: 3px solid transparent;
+    color: #a9b4d6;
+  }
+  .line .ln {
+    width: 26px;
+    flex: 0 0 26px;
+    color: #4a5580;
+    user-select: none;
+  }
+  .line.active {
+    background: rgba(91, 192, 235, 0.12);
+    border-left: 3px solid var(--accent);
+    color: var(--ink);
+  }
+  .line.active .ln { color: var(--accent); }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Two Pointers · O(n) / O(1)</div>
+    <h1>两数之和 II —— 双指针算法分步演示</h1>
+    <div class="sub">数组元素与源代码同步高亮，展示 left / right 指针如何根据当前两数之和与 target 的比较结果相向移动，直至找到答案。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数组演示</h2>
+      <svg class="stage-svg" viewBox="0 0 920 260" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--box)"></i>数组元素</span>
+        <span><i class="dot" style="background:var(--left-color)"></i>left 指针</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right 指针</span>
+        <span><i class="dot" style="background:var(--eq)"></i>已找到答案</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip sum"><div class="label">S</div><div class="value" id="chip-sum">-</div></div>
+        <div class="chip"><div class="label">TARGET</div><div class="value" id="chip-target">-</div></div>
+        <div class="chip result"><div class="label">RESULT</div><div class="value" id="chip-result">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const numbers = [1, 3, 4, 5, 7, 10, 11];
+  const target = 9;
+
+  const codeLines = [
+    "# 其他语言的实现，见视频简介",
+    "class Solution:",
+    "    def twoSum(self, numbers: List[int], target: int) -> List[int]:",
+    "        left = 0",
+    "        right = len(numbers) - 1",
+    "        while True:  # left < right",
+    "            s = numbers[left] + numbers[right]",
+    "            if s == target:",
+    "                break",
+    "            if s > target:",
+    "                right -= 1",
+    "            else:",
+    "                left += 1",
+    "        return [left+1, right+1]"
+  ];
+
+  function simulate(numbers, target) {
+    const steps = [];
+    let left = 0, right = numbers.length - 1;
+
+    steps.push({
+      type: "init", left, right,
+      lines: [4, 5],
+      desc: "初始化：left 指向下标 0，right 指向数组最后一个下标，数组已按非递减顺序排列。"
+    });
+
+    while (true) {
+      const s = numbers[left] + numbers[right];
+
+      if (s === target) {
+        steps.push({
+          type: "found", left, right, s,
+          lines: [6, 7, 8, 9],
+          desc: "s = numbers[left] + numbers[right] = " + numbers[left] + " + " + numbers[right] +
+                " = " + s + "，等于 target(" + target + ")，跳出循环。"
+        });
+        break;
+      } else if (s > target) {
+        steps.push({
+          type: "iter", branch: "right", left, right, s,
+          lines: [6, 7, 8, 10, 11],
+          desc: "s = " + numbers[left] + " + " + numbers[right] + " = " + s +
+                "，大于 target(" + target + ")，两数之和偏大，right 左移一位以减小和。"
+        });
+        right -= 1;
+      } else {
+        steps.push({
+          type: "iter", branch: "left", left, right, s,
+          lines: [6, 7, 8, 10, 12, 13],
+          desc: "s = " + numbers[left] + " + " + numbers[right] + " = " + s +
+                "，小于 target(" + target + ")，两数之和偏小，left 右移一位以增大和。"
+        });
+        left += 1;
+      }
+    }
+
+    steps.push({
+      type: "final", left, right,
+      lines: [14],
+      desc: "循环结束，按题目要求返回从 1 开始的下标：[" + (left + 1) + ", " + (right + 1) + "]。"
+    });
+
+    return steps;
+  }
+
+  const steps = simulate(numbers, target);
+  let current = 0;
+  let playTimer = null;
+
+  // ---- code panel ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((n) => {
+      const el = document.getElementById("line-" + n);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- SVG stage geometry ----
+  const n = numbers.length;
+  const boxSize = 64, gap = 18, startX = 60;
+  const boxY = 70;
+
+  function boxX(i) { return startX + i * (boxSize + gap); }
+
+  function renderStage(step) {
+    const parts = [];
+    const left = step.left, right = step.right;
+    const isFound = step.type === "found";
+
+    // connecting sum bracket above the two active boxes
+    if (step.s !== undefined) {
+      const x1 = boxX(left) + boxSize / 2;
+      const x2 = boxX(right) + boxSize / 2;
+      const bracketY = boxY - 26;
+      let symColor = "var(--eq)", sym = "=";
+      if (step.branch === "right") { symColor = "var(--gt)"; sym = ">"; }
+      if (step.branch === "left") { symColor = "var(--lt)"; sym = "<"; }
+      if (isFound) { symColor = "var(--eq)"; sym = "="; }
+
+      parts.push(
+        '<path d="M ' + x1 + ' ' + boxY + ' L ' + x1 + ' ' + bracketY + ' L ' + x2 + ' ' + bracketY + ' L ' + x2 + ' ' + boxY +
+        '" fill="none" stroke="' + symColor + '" stroke-width="1.5" opacity="0.85"/>'
+      );
+      parts.push(
+        '<text x="' + ((x1 + x2) / 2) + '" y="' + (bracketY - 10) + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="' + symColor +
+        '" text-anchor="middle">' + numbers[left] + ' + ' + numbers[right] + ' = ' + step.s + '  ' + sym + '  ' + target + '</text>'
+      );
+    } else if (step.type === "init") {
+      parts.push(
+        '<text x="460" y="' + (boxY - 34) + '" font-family="JetBrains Mono, monospace" font-size="13" fill="var(--ink-dim)" text-anchor="middle">target = ' + target + '</text>'
+      );
+    }
+
+    // boxes
+    for (let i = 0; i < n; i++) {
+      const x = boxX(i);
+      const inWindow = i >= left && i <= right;
+      const isLeft = i === left;
+      const isRight = i === right;
+
+      let fill = inWindow ? "var(--box)" : "var(--box-dim)";
+      let opacity = inWindow ? "1" : "0.4";
+      let stroke = "#2c3766";
+      let strokeWidth = "1";
+
+      if (isFound && (isLeft || isRight)) {
+        stroke = "var(--eq)";
+        strokeWidth = "2.5";
+      } else if (isLeft) {
+        stroke = "var(--left-color)";
+        strokeWidth = "2.5";
+      } else if (isRight) {
+        stroke = "var(--right-color)";
+        strokeWidth = "2.5";
+      }
+
+      parts.push(
+        '<rect x="' + x + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="19" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + numbers[i] + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize + 18) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)" text-anchor="middle">' + i + '</text>'
+      );
+    }
+
+    // pointer arrows
+    if (!isFound || true) {
+      const arrowY = boxY + boxSize + 40;
+      const lx = boxX(left) + boxSize / 2;
+      parts.push(
+        '<text x="' + lx + '" y="' + arrowY + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--left-color)" text-anchor="middle">▲</text>'
+      );
+      parts.push(
+        '<text x="' + lx + '" y="' + (arrowY + 15) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--left-color)" text-anchor="middle">left</text>'
+      );
+
+      const rx = boxX(right) + boxSize / 2;
+      parts.push(
+        '<text x="' + rx + '" y="' + arrowY + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--right-color)" text-anchor="middle">▲</text>'
+      );
+      parts.push(
+        '<text x="' + rx + '" y="' + (arrowY + 15) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--right-color)" text-anchor="middle">right</text>'
+      );
+    }
+
+    if (isFound) {
+      parts.push(
+        '<text x="460" y="235" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--eq)" text-anchor="middle">已找到满足条件的两个数</text>'
+      );
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = step.right !== undefined ? step.right : "—";
+    document.getElementById("chip-sum").textContent = step.s !== undefined ? step.s : "—";
+    document.getElementById("chip-target").textContent = target;
+    document.getElementById("chip-result").textContent =
+      step.type === "final" ? "[" + (step.left + 1) + ", " + (step.right + 1) + "]" : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+      document.getElementById("btn-play").textContent = "播放";
+    }
+  }
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay();
+    if (current > 0) { current--; render(); }
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay();
+    current = 0;
+    render();
+  });
+
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) {
+        current++;
+        render();
+      } else {
+        stopPlay();
+      }
+    }, 1400);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
