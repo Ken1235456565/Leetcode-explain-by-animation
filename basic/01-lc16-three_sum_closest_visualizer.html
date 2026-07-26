@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最接近的三数之和 · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --i-color: #c86bfa;
+    --j-color: #3ddc97;
+    --k-color: #f9a826;
+    --gt: #f96e6e;
+    --lt: #5bc0eb;
+    --eq: #6ee7a0;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 6px 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 18px;
+    margin-top: 22px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: #1a2350;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-dim);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px;
+    padding: 13px 15px;
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    min-height: 60px;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  @media (max-width: 640px) {
+    .chips { grid-template-columns: repeat(3, 1fr); }
+  }
+  .chip {
+    background: #0e1636;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+  .chip .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-dim);
+    letter-spacing: 0.04em;
+  }
+  .chip .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .chip.i .value { color: var(--i-color); }
+  .chip.j .value { color: var(--j-color); }
+  .chip.k .value { color: var(--k-color); }
+  .chip.s .value { color: var(--accent); }
+  .chip.target .value { color: var(--ink); }
+  .chip.best .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130;
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+  .line {
+    display: flex;
+    padding: 0 14px;
+    white-space: pre;
+    border-left: 3px solid transparent;
+    color: #a9b4d6;
+  }
+  .line .ln {
+    width: 26px;
+    flex: 0 0 26px;
+    color: #4a5580;
+    user-select: none;
+  }
+  .line.active {
+    background: rgba(91, 192, 235, 0.12);
+    border-left: 3px solid var(--accent);
+    color: var(--ink);
+  }
+  .line.active .ln { color: var(--accent); }
+
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Sorting + Two Pointers · O(n²) / O(1)</div>
+    <h1>最接近的三数之和 —— 排序 + 双指针分步演示</h1>
+    <div class="sub">固定 i，用双指针 j、k 相向移动，每一步计算三数之和 s，与目前最接近 target 的记录 ans 比较并更新，再根据 s 与 target 的大小关系移动指针。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数组演示</h2>
+      <svg class="stage-svg" viewBox="0 0 920 280" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--i-color)"></i>i 指针（固定数）</span>
+        <span><i class="dot" style="background:var(--j-color)"></i>j 指针</span>
+        <span><i class="dot" style="background:var(--k-color)"></i>k 指针</span>
+        <span><i class="dot" style="background:var(--best)"></i>ans 被更新</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip i"><div class="label">I</div><div class="value" id="chip-i">-</div></div>
+        <div class="chip j"><div class="label">J</div><div class="value" id="chip-j">-</div></div>
+        <div class="chip k"><div class="label">K</div><div class="value" id="chip-k">-</div></div>
+        <div class="chip s"><div class="label">S</div><div class="value" id="chip-s">-</div></div>
+        <div class="chip target"><div class="label">TARGET</div><div class="value" id="chip-target">-</div></div>
+        <div class="chip best"><div class="label">ANS</div><div class="value" id="chip-ans">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const inputNums = [-1, 2, 1, -4];
+  const target = 1;
+
+  const codeLines = [
+    "class Solution:",
+    "    def threeSumClosest(self, nums: List[int], target: int) -> int:",
+    "        nums.sort()",
+    "        n = len(nums)",
+    "        ans = nums[0] + nums[1] + nums[2]",
+    "        for i in range(n - 2):",
+    "            j = i + 1",
+    "            k = n - 1",
+    "            while j < k:",
+    "                s = nums[i] + nums[j] + nums[k]",
+    "                if s == target:",
+    "                    return s",
+    "                if abs(s - target) < abs(ans - target):",
+    "                    ans = s",
+    "                if s > target:",
+    "                    k -= 1",
+    "                else:",
+    "                    j += 1",
+    "        return ans"
+  ];
+
+  function simulate(input, target) {
+    const nums = input.slice().sort((a, b) => a - b);
+    const n = nums.length;
+    const steps = [];
+    let ans = nums[0] + nums[1] + nums[2];
+
+    steps.push({
+      type: "init",
+      nums: nums.slice(), ans,
+      lines: [3, 4, 5],
+      desc: "排序后 nums 为 [" + nums.join(", ") + "]。ans 先用前三个数之和初始化为 " + ans + "，作为目前最接近 target(" + target + ") 的记录。"
+    });
+
+    for (let i = 0; i < n - 2; i++) {
+      let j = i + 1, k = n - 1;
+
+      steps.push({
+        type: "i-init", i, j, k, ans,
+        lines: [6, 7, 8, 9],
+        desc: "固定 i=" + i + "（nums[i]=" + nums[i] + "），设置 j=i+1=" + j + "，k=n-1=" + k + "，开始双指针查找。"
+      });
+
+      while (j < k) {
+        const s = nums[i] + nums[j] + nums[k];
+        const dist = Math.abs(s - target);
+        const oldDist = Math.abs(ans - target);
+        const better = dist < oldDist;
+        const oldAns = ans;
+        if (better) ans = s;
+
+        if (s === target) {
+          steps.push({
+            type: "iter", branch: "eq", i, j, k, s, ans, better, dist,
+            lines: [9, 10, 11, 12],
+            desc: "s = " + nums[i] + " + " + nums[j] + " + " + nums[k] + " = " + s +
+                  "，正好等于 target，距离为 0，不可能更接近，直接返回 " + s + "。"
+          });
+          steps.push({
+            type: "final", ans: s,
+            lines: [12],
+            desc: "找到与 target 完全相等的和，返回 " + s + "。"
+          });
+          return steps;
+        }
+
+        let updateNote;
+        if (better) {
+          updateNote = "当前距离 |" + s + " - " + target + "| = " + dist + "，小于之前 ans 的距离 " + oldDist + "，更新 ans = " + s + "。";
+        } else {
+          updateNote = "当前距离 " + dist + " 不小于之前 ans(" + oldAns + ") 的距离 " + oldDist + "，ans 保持不变。";
+        }
+
+        if (s > target) {
+          steps.push({
+            type: "iter", branch: "gt", i, j, k, s, ans, better, dist,
+            lines: [9, 12, 13, 14, 15],
+            desc: "s = " + nums[i] + " + " + nums[j] + " + " + nums[k] + " = " + s + "。" + updateNote +
+                  " s 大于 target，k 左移一位以减小和。"
+          });
+          k -= 1;
+        } else {
+          steps.push({
+            type: "iter", branch: "lt", i, j, k, s, ans, better, dist,
+            lines: [9, 12, 13, 16, 17, 18],
+            desc: "s = " + nums[i] + " + " + nums[j] + " + " + nums[k] + " = " + s + "。" + updateNote +
+                  " s 小于 target，j 右移一位以增大和。"
+          });
+          j += 1;
+        }
+      }
+    }
+
+    steps.push({
+      type: "final", ans,
+      lines: [19],
+      desc: "所有组合检查完毕，返回最接近 target 的三数之和 ans = " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  const steps = simulate(inputNums, target);
+  const sortedNums = steps[0].nums;
+  const n = sortedNums.length;
+  let current = 0;
+  let playTimer = null;
+
+  // ---- code panel ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- SVG stage geometry ----
+  const boxSize = 68, gap = 24, startX = 150;
+  const boxY = 90;
+
+  function boxX(idx) { return startX + idx * (boxSize + gap); }
+
+  function renderStage(step) {
+    const parts = [];
+    const hasIJK = step.i !== undefined;
+    const i = step.i, j = step.j, k = step.k;
+
+    // sum bracket across i, j, k (above)
+    if (step.s !== undefined && hasIJK) {
+      const xi = boxX(i) + boxSize / 2;
+      const xk = boxX(k) + boxSize / 2;
+      const bracketY = boxY - 30;
+      let symColor = "var(--eq)", sym = "=";
+      if (step.branch === "gt") { symColor = "var(--gt)"; sym = ">"; }
+      if (step.branch === "lt") { symColor = "var(--lt)"; sym = "<"; }
+      parts.push(
+        '<path d="M ' + xi + ' ' + boxY + ' L ' + xi + ' ' + bracketY + ' L ' + xk + ' ' + bracketY + ' L ' + xk + ' ' + boxY +
+        '" fill="none" stroke="' + symColor + '" stroke-width="1.5" opacity="0.75"/>'
+      );
+      parts.push(
+        '<text x="' + ((xi + xk) / 2) + '" y="' + (bracketY - 10) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + symColor +
+        '" text-anchor="middle">' + sortedNums[i] + ' + ' + sortedNums[j] + ' + ' + sortedNums[k] + ' = ' + step.s + '   (s ' + sym + ' target=' + target + ')</text>'
+      );
+    } else if (step.type === "init") {
+      parts.push(
+        '<text x="460" y="' + (boxY - 34) + '" font-family="JetBrains Mono, monospace" font-size="13" fill="var(--ink-dim)" text-anchor="middle">target = ' + target + '</text>'
+      );
+    }
+
+    // boxes
+    for (let idx = 0; idx < n; idx++) {
+      const x = boxX(idx);
+      let inWindow = true;
+      if (hasIJK && j !== undefined && k !== undefined) {
+        inWindow = idx === i || (idx >= j && idx <= k);
+      }
+      let fill = inWindow ? "var(--box)" : "var(--box-dim)";
+      let opacity = inWindow ? "1" : "0.35";
+      let stroke = "#2c3766";
+      let strokeWidth = "1";
+      if (idx === i && hasIJK) { stroke = "var(--i-color)"; strokeWidth = "2.5"; }
+      else if (idx === j && hasIJK) { stroke = "var(--j-color)"; strokeWidth = "2.5"; }
+      else if (idx === k && hasIJK) { stroke = "var(--k-color)"; strokeWidth = "2.5"; }
+
+      parts.push(
+        '<rect x="' + x + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="19" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + sortedNums[idx] + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize + 18) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    // pointer arrows (below)
+    if (hasIJK) {
+      const arrowY = boxY + boxSize + 40;
+      const pts = [
+        { idx: i, color: "var(--i-color)", label: "i" },
+        { idx: j, color: "var(--j-color)", label: "j" },
+        { idx: k, color: "var(--k-color)", label: "k" }
+      ];
+      pts.forEach((p) => {
+        if (p.idx === undefined) return;
+        const px = boxX(p.idx) + boxSize / 2;
+        parts.push(
+          '<text x="' + px + '" y="' + arrowY + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="' + p.color + '" text-anchor="middle">▲</text>'
+        );
+        parts.push(
+          '<text x="' + px + '" y="' + (arrowY + 15) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="' + p.color + '" text-anchor="middle">' + p.label + '</text>'
+        );
+      });
+    }
+
+    // "ans updated" flash badge
+    if (step.better) {
+      parts.push(
+        '<rect x="330" y="235" width="260" height="30" rx="15" fill="rgba(255,209,102,0.14)" stroke="var(--best)" stroke-width="1.2"/>'
+      );
+      parts.push(
+        '<text x="460" y="255" font-family="JetBrains Mono, monospace" font-size="12.5" font-weight="700" fill="var(--best)" text-anchor="middle">ans 更新为 ' + step.ans + '（距离 ' + step.dist + '）</text>'
+      );
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-i").textContent = step.i !== undefined ? step.i : "—";
+    document.getElementById("chip-j").textContent = step.j !== undefined ? step.j : "—";
+    document.getElementById("chip-k").textContent = step.k !== undefined ? step.k : "—";
+    document.getElementById("chip-s").textContent = step.s !== undefined ? step.s : "—";
+    document.getElementById("chip-target").textContent = target;
+    document.getElementById("chip-ans").textContent = step.ans !== undefined ? step.ans : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) {
+      clearInterval(playTimer);
+      playTimer = null;
+      document.getElementById("btn-play").textContent = "播放";
+    }
+  }
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay();
+    if (current > 0) { current--; render(); }
+  });
+
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay();
+    current = 0;
+    render();
+  });
+
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) {
+        current++;
+        render();
+      } else {
+        stopPlay();
+      }
+    }, 1600);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
