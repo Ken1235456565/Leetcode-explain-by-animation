@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>给植物浇水 II · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --alice: #3ddc97;
+    --bob: #f9a826;
+    --mid: #c86bfa;
+    --water: #5bc0eb;
+    --refill: #f96e6e;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 78px;
+  }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(3, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.i .value { color: var(--alice); }
+  .chip.j .value { color: var(--bob); }
+  .chip.a .value { color: var(--alice); }
+  .chip.b .value { color: var(--bob); }
+  .chip.ans .value { color: var(--refill); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.8; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 12px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 24px; flex: 0 0 24px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Two Pointers · O(n) / O(1)</div>
+    <h1>给植物浇水 II —— 双指针分步演示</h1>
+    <div class="sub">Alice 从最左、Bob 从最右同时浇水，各带一个水壶。浇当前这株时若剩余水不够，先把水壶加满（补水次数 +1），最后在中间相遇。返回补水总次数。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>花园演示</h2>
+      <svg class="stage-svg" viewBox="0 0 920 320" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--alice)"></i>Alice（指针 i）</span>
+        <span><i class="dot" style="background:var(--bob)"></i>Bob（指针 j）</span>
+        <span><i class="dot" style="background:var(--mid)"></i>中间株（相遇）</span>
+        <span><i class="dot" style="background:var(--refill)"></i>补水</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip i"><div class="label">I（Alice）</div><div class="value" id="chip-i">-</div></div>
+        <div class="chip j"><div class="label">J（Bob）</div><div class="value" id="chip-j">-</div></div>
+        <div class="chip a"><div class="label">Alice 剩余</div><div class="value" id="chip-a">-</div></div>
+        <div class="chip b"><div class="label">Bob 剩余</div><div class="value" id="chip-b">-</div></div>
+        <div class="chip ans"><div class="label">补水次数</div><div class="value" id="chip-ans">0</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const plants = [1, 2, 4, 4, 5];
+  const capacityA = 6;
+  const capacityB = 5;
+
+  const codeLines = [
+    "def minimumRefill(self, plants, capacityA, capacityB):",
+    "    n = len(plants)",
+    "    a, b = capacityA, capacityB",
+    "    ans = 0",
+    "    i, j = 0, n - 1",
+    "    while i < j:",
+    "        if a < plants[i]:      # Alice 水不够，补水",
+    "            ans += 1",
+    "            a = capacityA",
+    "        a -= plants[i]",
+    "        if b < plants[j]:      # Bob 水不够，补水",
+    "            ans += 1",
+    "            b = capacityB",
+    "        b -= plants[j]",
+    "        i += 1",
+    "        j -= 1",
+    "    if i == j:                 # 奇数长度，中间株",
+    "        if max(a, b) < plants[i]:",
+    "            ans += 1",
+    "    return ans"
+  ];
+
+  function simulate(plants, capA, capB) {
+    const n = plants.length;
+    const steps = [];
+    let a = capA, b = capB, ans = 0, i = 0, j = n - 1;
+
+    steps.push({
+      type: "init", i, j, a, b, ans,
+      lines: [2, 3, 4, 5],
+      desc: "plants = [" + plants.join(", ") + "]。Alice 水壶容量 " + capA + "，Bob 容量 " + capB +
+            "，都装满。i 从最左(0)、j 从最右(" + j + ")同时出发。"
+    });
+
+    while (i < j) {
+      const aBefore = a, bBefore = b;
+      let aRefill = false, bRefill = false;
+      if (a < plants[i]) { ans += 1; a = capA; aRefill = true; }
+      a -= plants[i];
+      if (b < plants[j]) { ans += 1; b = capB; bRefill = true; }
+      b -= plants[j];
+
+      let desc = "Alice 浇 plants[" + i + "]=" + plants[i] + "：剩余 " + aBefore;
+      desc += aRefill ? (" < " + plants[i] + "，不够，补水后满为 " + capA + "，再浇剩 " + a + "。") : (" ≥ " + plants[i] + "，直接浇，剩 " + a + "。");
+      desc += " 同时 Bob 浇 plants[" + j + "]=" + plants[j] + "：剩余 " + bBefore;
+      desc += bRefill ? (" < " + plants[j] + "，不够，补水后满为 " + capB + "，再浇剩 " + b + "。") : (" ≥ " + plants[j] + "，直接浇，剩 " + b + "。");
+
+      steps.push({
+        type: "iter", i, j, a, b, ans, aRefill, bRefill,
+        lines: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+        desc
+      });
+      i += 1; j -= 1;
+    }
+
+    if (i === j) {
+      const use = Math.max(a, b);
+      const who = a >= b ? "Alice" : "Bob";
+      let midRefill = false;
+      if (use < plants[i]) { ans += 1; midRefill = true; }
+      steps.push({
+        type: "mid", i, a, b, ans, midRefill,
+        lines: [17, 18, 19],
+        desc: "i 与 j 相遇在中间株 plants[" + i + "]=" + plants[i] + "。由水多的一方(" + who + "，剩 " + use + ")来浇。" +
+              (midRefill ? ("水 " + use + " < " + plants[i] + "，不够，需要补水一次。") : ("水足够，无需补水。"))
+      });
+    }
+
+    steps.push({
+      type: "final", ans,
+      lines: [20],
+      desc: "全部浇完，返回补水总次数 ans = " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  const steps = simulate(plants, capacityA, capacityB);
+  const n = plants.length;
+  const capMax = Math.max(capacityA, capacityB);
+  let current = 0;
+  let playTimer = null;
+
+  // ---- code panel ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- SVG geometry ----
+  const potW = 70, gap = 20, startX = 130;
+  const potTop = 150, potH = 66;
+
+  function potX(idx) { return startX + idx * (potW + gap); }
+
+  // watering can gauge on the sides
+  function gauge(x, level, cap, color, label) {
+    const gW = 42, gH = 100, gy = 90;
+    const fillH = cap > 0 ? (gH * Math.max(0, level) / cap) : 0;
+    let out = "";
+    out += '<rect x="' + x + '" y="' + gy + '" width="' + gW + '" height="' + gH + '" rx="6" fill="#0e1636" stroke="' + color + '" stroke-width="1.5"/>';
+    out += '<rect x="' + x + '" y="' + (gy + gH - fillH) + '" width="' + gW + '" height="' + fillH + '" rx="4" fill="' + color + '" opacity="0.55"/>';
+    out += '<text x="' + (x + gW / 2) + '" y="' + (gy - 10) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + color + '" text-anchor="middle">' + label + '</text>';
+    out += '<text x="' + (x + gW / 2) + '" y="' + (gy + gH / 2 + 5) + '" font-family="JetBrains Mono, monospace" font-size="16" font-weight="700" fill="var(--ink)" text-anchor="middle">' + level + '</text>';
+    out += '<text x="' + (x + gW / 2) + '" y="' + (gy + gH + 16) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--ink-dim)" text-anchor="middle">/' + cap + '</text>';
+    return out;
+  }
+
+  function renderStage(step) {
+    const parts = [];
+    const i = step.i, j = step.j;
+    const isMid = step.type === "mid";
+    const hasPtr = i !== undefined && step.type !== "final";
+
+    // side gauges
+    if (step.a !== undefined) parts.push(gauge(28, step.a, capacityA, "var(--alice)", "Alice"));
+    if (step.b !== undefined) parts.push(gauge(850, step.b, capacityB, "var(--bob)", "Bob"));
+
+    // plants (pots)
+    for (let idx = 0; idx < n; idx++) {
+      const x = potX(idx);
+      const isI = hasPtr && idx === i && !isMid;
+      const isJ = hasPtr && idx === j && !isMid;
+      const isMiddle = isMid && idx === i;
+
+      let watered = false;
+      if (step.type === "iter") { watered = idx < i || idx > j; }
+      else if (isMid || step.type === "final") { watered = true; }
+      else if (step.type === "init") { watered = false; }
+
+      let stroke = "#2c3766", strokeWidth = "1", fill = "var(--box)", opacity = "1";
+      if (isI) { stroke = "var(--alice)"; strokeWidth = "2.5"; }
+      else if (isJ) { stroke = "var(--bob)"; strokeWidth = "2.5"; }
+      else if (isMiddle) { stroke = "var(--mid)"; strokeWidth = "3"; }
+      else if (watered) { opacity = "0.4"; }
+
+      // pot body
+      parts.push(
+        '<rect x="' + x + '" y="' + potTop + '" width="' + potW + '" height="' + potH +
+        '" rx="8" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      // little plant/leaf mark
+      parts.push(
+        '<text x="' + (x + potW / 2) + '" y="' + (potTop - 8) + '" font-size="18" text-anchor="middle" opacity="' + (watered ? "1" : "0.5") + '">🌱</text>'
+      );
+      // water-need value
+      parts.push(
+        '<text x="' + (x + potW / 2) + '" y="' + (potTop + potH / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="18" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + plants[idx] + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + potW / 2) + '" y="' + (potTop + potH + 16) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    // pointer arrows
+    if (hasPtr && !isMid) {
+      const ay = potTop + potH + 38;
+      const ix = potX(i) + potW / 2;
+      const jx = potX(j) + potW / 2;
+      parts.push('<text x="' + ix + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--alice)" text-anchor="middle">▲</text>');
+      parts.push('<text x="' + ix + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--alice)" text-anchor="middle">i</text>');
+      parts.push('<text x="' + jx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--bob)" text-anchor="middle">▲</text>');
+      parts.push('<text x="' + jx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--bob)" text-anchor="middle">j</text>');
+    } else if (isMid) {
+      const mx = potX(i) + potW / 2;
+      const ay = potTop + potH + 38;
+      parts.push('<text x="' + mx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--mid)" text-anchor="middle">▲</text>');
+      parts.push('<text x="' + mx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--mid)" text-anchor="middle">i=j</text>');
+    }
+
+    // refill badges
+    const badges = [];
+    if (step.aRefill) badges.push("Alice 补水");
+    if (step.bRefill) badges.push("Bob 补水");
+    if (step.midRefill) badges.push("中间株补水");
+    if (badges.length) {
+      const txt = badges.join("　");
+      parts.push('<rect x="310" y="34" width="300" height="30" rx="15" fill="rgba(249,110,110,0.12)" stroke="var(--refill)" stroke-width="1.2"/>');
+      parts.push('<text x="460" y="54" font-family="JetBrains Mono, monospace" font-size="12.5" font-weight="700" fill="var(--refill)" text-anchor="middle">💧 ' + txt + '</text>');
+    }
+
+    if (step.type === "final") {
+      parts.push('<rect x="330" y="34" width="260" height="30" rx="15" fill="rgba(91,192,235,0.10)" stroke="var(--accent)" stroke-width="1.2"/>');
+      parts.push('<text x="460" y="54" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--accent)" text-anchor="middle">返回补水次数 = ' + step.ans + '</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-i").textContent = (step.i !== undefined && step.type !== "final") ? step.i : "—";
+    document.getElementById("chip-j").textContent = (step.j !== undefined && step.type !== "final" && step.type !== "mid") ? step.j : "—";
+    document.getElementById("chip-a").textContent = step.a !== undefined ? step.a : "—";
+    document.getElementById("chip-b").textContent = step.b !== undefined ? step.b : "—";
+    document.getElementById("chip-ans").textContent = step.ans !== undefined ? step.ans : 0;
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1700);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

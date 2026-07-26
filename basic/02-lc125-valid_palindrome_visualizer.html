@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>验证回文串 · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --skip: #6b7394;
+    --left-color: #3ddc97;
+    --right-color: #f9a826;
+    --match: #6ee7a0;
+    --mismatch: #f96e6e;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .input-row { display: flex; gap: 8px; margin-top: 4px; margin-bottom: 6px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 180px;
+  }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(2, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.cmp .value { color: var(--accent); }
+  .chip.res .value { color: var(--match); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Two Pointers · O(n) / O(1)</div>
+    <h1>验证回文串 —— 双指针分步演示</h1>
+    <div class="sub">left、right 从两端向中间靠拢。遇到非字母数字字符就跳过，其余字符转小写后两两比较；一旦不相等即判定为非回文。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>字符串演示</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-str" value="Race, car!" maxlength="28" />
+        <button id="btn-run" class="primary">运行这个字符串</button>
+      </div>
+
+      <svg class="stage-svg" viewBox="0 0 920 220" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--left-color)"></i>left 指针</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right 指针</span>
+        <span><i class="dot" style="background:var(--skip)"></i>非字母数字（跳过）</span>
+        <span><i class="dot" style="background:var(--match)"></i>比较相等</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip cmp"><div class="label">当前比较</div><div class="value" id="chip-cmp">-</div></div>
+        <div class="chip res"><div class="label">结果</div><div class="value" id="chip-res">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class Solution:",
+    "    def isPalindrome(self, s: str) -> bool:",
+    "        left = 0",
+    "        right = len(s) - 1",
+    "        while left < right:",
+    "            while left < right and not s[left].isalnum():",
+    "                left += 1",
+    "            while left < right and not s[right].isalnum():",
+    "                right -= 1",
+    "            if s[left].lower() != s[right].lower():",
+    "                return False",
+    "            left += 1",
+    "            right -= 1",
+    "        return True"
+  ];
+
+  function isAlnum(ch) { return /[a-z0-9]/i.test(ch); }
+
+  function simulate(s) {
+    const n = s.length;
+    const steps = [];
+    let left = 0, right = n - 1;
+
+    steps.push({
+      type: "init", left, right,
+      lines: [3, 4, 5],
+      desc: 's = "' + s + '"。left 指向下标 0，right 指向最后一个下标 ' + right + '，从两端开始向中间比较。'
+    });
+
+    while (left < right) {
+      while (left < right && !isAlnum(s[left])) {
+        steps.push({
+          type: "skipL", left, right,
+          lines: [6, 7],
+          desc: "s[left]='" + s[left] + "'（下标 " + left + "）不是字母或数字，跳过，left 右移一位。"
+        });
+        left += 1;
+      }
+      while (left < right && !isAlnum(s[right])) {
+        steps.push({
+          type: "skipR", left, right,
+          lines: [8, 9],
+          desc: "s[right]='" + s[right] + "'（下标 " + right + "）不是字母或数字，跳过，right 左移一位。"
+        });
+        right -= 1;
+      }
+
+      if (left < right) {
+        const a = s[left], b = s[right];
+        const match = a.toLowerCase() === b.toLowerCase();
+
+        if (!match) {
+          steps.push({
+            type: "cmp", left, right, a, b, match: false,
+            lines: [10, 11],
+            desc: "比较 s[left]='" + a + "' 与 s[right]='" + b + "'（转小写后 '" + a.toLowerCase() + "' vs '" +
+                  b.toLowerCase() + "'），不相等，直接返回 False，字符串不是回文。"
+          });
+          steps.push({
+            type: "final", result: false,
+            lines: [11],
+            desc: "发现一对字符不匹配，返回 False。"
+          });
+          return steps;
+        }
+
+        steps.push({
+          type: "cmp", left, right, a, b, match: true,
+          lines: [10],
+          desc: "比较 s[left]='" + a + "' 与 s[right]='" + b + "'（转小写后相等），匹配通过。"
+        });
+        steps.push({
+          type: "adv", left, right,
+          lines: [12, 13],
+          desc: "这一对匹配，left 右移、right 左移，继续比较更内层的字符。"
+        });
+        left += 1;
+        right -= 1;
+      }
+    }
+
+    steps.push({
+      type: "final", result: true,
+      lines: [14],
+      desc: "left 与 right 相遇或交错，所有对应字符都匹配，返回 True，字符串是回文。"
+    });
+
+    return steps;
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let s = "Race, car!";
+  let steps = simulate(s);
+  let current = 0;
+  let playTimer = null;
+
+  function renderStage(step) {
+    const n = s.length;
+    const parts = [];
+    const boxSize = Math.min(58, Math.floor((860) / n) - 6);
+    const gap = 8;
+    const totalW = n * (boxSize + gap) - gap;
+    const startX = (920 - totalW) / 2;
+    const boxY = 70;
+
+    function bx(idx) { return startX + idx * (boxSize + gap); }
+
+    const left = step.left, right = step.right;
+    const hasPtr = left !== undefined && right !== undefined && step.type !== "final";
+
+    for (let idx = 0; idx < n; idx++) {
+      const x = bx(idx);
+      const ch = s[idx];
+      const alnum = isAlnum(ch);
+      const isLeft = idx === left && hasPtr;
+      const isRight = idx === right && hasPtr;
+      const beingSkipped = (step.type === "skipL" && idx === left) || (step.type === "skipR" && idx === right);
+      const inCompare = step.type === "cmp" && (idx === left || idx === right);
+
+      let fill = "var(--box)";
+      let stroke = "#2c3766";
+      let strokeWidth = "1";
+      let textColor = "var(--ink)";
+      let opacity = "1";
+
+      if (!alnum) { fill = "#171c38"; textColor = "var(--skip)"; }
+
+      if (hasPtr && (idx < left || idx > right)) { opacity = "0.32"; }
+
+      if (beingSkipped) { stroke = "var(--skip)"; strokeWidth = "2.5"; }
+      else if (inCompare) {
+        stroke = step.match ? "var(--match)" : "var(--mismatch)";
+        strokeWidth = "3";
+        fill = step.match ? "rgba(110,231,160,0.14)" : "rgba(249,110,110,0.16)";
+      }
+      else if (isLeft) { stroke = "var(--left-color)"; strokeWidth = "2.5"; }
+      else if (isRight) { stroke = "var(--right-color)"; strokeWidth = "2.5"; }
+
+      parts.push(
+        '<rect x="' + x + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="9" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      const shown = ch === " " ? "␣" : ch;
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="' + Math.min(20, boxSize * 0.42) +
+        '" font-weight="700" fill="' + textColor + '" text-anchor="middle" opacity="' + opacity + '">' + shown + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize + 15) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    // comparison connector for cmp step
+    if (step.type === "cmp") {
+      const x1 = bx(left) + boxSize / 2;
+      const x2 = bx(right) + boxSize / 2;
+      const brY = boxY - 20;
+      const col = step.match ? "var(--match)" : "var(--mismatch)";
+      const sym = step.match ? "=" : "≠";
+      parts.push(
+        '<path d="M ' + x1 + ' ' + boxY + ' L ' + x1 + ' ' + brY + ' L ' + x2 + ' ' + brY + ' L ' + x2 + ' ' + boxY +
+        '" fill="none" stroke="' + col + '" stroke-width="1.5" opacity="0.8"/>'
+      );
+      parts.push(
+        '<text x="' + ((x1 + x2) / 2) + '" y="' + (brY - 8) + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="' + col +
+        '" text-anchor="middle">' + step.a.toLowerCase() + ' ' + sym + ' ' + step.b.toLowerCase() + '</text>'
+      );
+    }
+
+    // pointer arrows below
+    if (hasPtr) {
+      const ay = boxY + boxSize + 36;
+      const lx = bx(left) + boxSize / 2;
+      const rx = bx(right) + boxSize / 2;
+      if (left === right) {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--accent)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--accent)" text-anchor="middle">l,r</text>');
+      } else {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--left-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--left-color)" text-anchor="middle">left</text>');
+        parts.push('<text x="' + rx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--right-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + rx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--right-color)" text-anchor="middle">right</text>');
+      }
+    }
+
+    // final badge
+    if (step.type === "final") {
+      const col = step.result ? "var(--match)" : "var(--mismatch)";
+      const txt = step.result ? "返回 True（是回文）" : "返回 False（不是回文）";
+      parts.push('<rect x="350" y="150" width="220" height="34" rx="17" fill="rgba(91,192,235,0.10)" stroke="' + col + '" stroke-width="1.4"/>');
+      parts.push('<text x="460" y="172" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="' + col + '" text-anchor="middle">' + txt + '</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = step.right !== undefined ? step.right : "—";
+    document.getElementById("chip-cmp").textContent =
+      step.type === "cmp" ? (step.a + " / " + step.b) : "—";
+    const resEl = document.getElementById("chip-res");
+    if (step.type === "final") {
+      resEl.textContent = step.result ? "True" : "False";
+      resEl.style.color = step.result ? "var(--match)" : "var(--mismatch)";
+    } else {
+      resEl.textContent = "—";
+      resEl.style.color = "var(--match)";
+    }
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  function reloadWith(newStr) {
+    stopPlay();
+    s = newStr.length ? newStr : " ";
+    steps = simulate(s);
+    current = 0;
+    render();
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    reloadWith(document.getElementById("input-str").value);
+  });
+  document.getElementById("input-str").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-str").value);
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1200);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && document.activeElement.id === "input-str") return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
