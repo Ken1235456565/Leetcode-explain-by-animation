@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>不同元素和至少为 K 的最短子数组 · 双指针分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --left-color: #f9a826;
+    --right-color: #3ddc97;
+    --window: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --over: #f96e6e;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 25px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 140px;
+  }
+  input.k-input { flex: 0 0 90px; min-width: 70px; }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .score-box { margin-top: 14px; }
+  .score-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .score-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .score-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .score-pill.match { color: var(--best); border-color: var(--best); background: rgba(255,209,102,0.12); }
+  .score-arrow { color: var(--ink-dim); font-size: 13px; }
+
+  .cnt-box { margin-top: 14px; }
+  .cnt-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .cnt-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+  .cnt-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .cnt-pill.added { color: var(--right-color); border-color: var(--right-color); background: rgba(61,220,151,0.12); }
+  .cnt-pill.removed { color: var(--over); border-color: var(--over); background: rgba(249,110,110,0.12); }
+  .cnt-empty { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ink-dim); }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 640px) { .chips { grid-template-columns: repeat(3, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.sum .value { color: var(--window); }
+  .chip.target .value { color: var(--ink); }
+  .chip.ans .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Two Pointers · Hash Map · O(n)</div>
+    <h1>不同元素和至少为 K 的最短子数组 —— 双指针分步演示</h1>
+    <div class="sub">窗口内用哈希表 cnt 记录每个数值出现的次数，用 s 记录窗口内所有不同数值之和（每个数值只算一次）。right 扩张时，若某数值是第一次进入窗口就把它计入 s；只要 s &ge; k，就用当前窗口长度尝试刷新最短答案，然后从 left 收缩一格，若某数值的计数减到 0 就把它从 s 中移除。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数组演示</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-arr" value="5,5,4" maxlength="60" />
+        <input type="text" id="input-k" class="k-input" value="5" maxlength="8" />
+        <button id="btn-run" class="primary">运行该输入</button>
+      </div>
+
+      <svg class="stage-svg" viewBox="0 0 920 210" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--left-color)"></i>left</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right</span>
+        <span><i class="dot" style="background:var(--best)"></i>s &ge; k，尝试刷新最短长度</span>
+        <span><i class="dot" style="background:var(--over)"></i>收缩：某数值计数减到 0，移出 s</span>
+      </div>
+
+      <div class="score-box">
+        <div class="score-label">不同元素之和 s 与目标值 k 的比较</div>
+        <div class="score-row" id="score-row"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">窗口内各数值出现次数 cnt</div>
+        <div class="cnt-list" id="cnt-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip sum"><div class="label">s</div><div class="value" id="chip-sum">-</div></div>
+        <div class="chip target"><div class="label">k</div><div class="value" id="chip-target">-</div></div>
+        <div class="chip ans"><div class="label">ANS（最短）</div><div class="value" id="chip-ans">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class Solution:",
+    "    def minLength(self, nums: List[int], k: int) -> int:",
+    "        n = len(nums)",
+    "        ans = n + 1",
+    "        cnt = defaultdict(int)",
+    "        l = 0",
+    "        s = 0",
+    "        for r in range(n):",
+    "            cnt[nums[r]] += 1",
+    "            if cnt[nums[r]] == 1:",
+    "                s += nums[r]",
+    "            while s >= k:",
+    "                ans = min(ans, r - l + 1)",
+    "                cnt[nums[l]] -= 1",
+    "                if cnt[nums[l]] == 0:",
+    "                    s -= nums[l]",
+    "                l += 1",
+    "        return -1 if ans > n else ans"
+  ];
+
+  function simulate(nums, k) {
+    const n = nums.length;
+    const steps = [];
+    const cnt = {};
+    let left = 0, s = 0, ans = n + 1;
+
+    function snapshot() {
+      const o = {};
+      for (const key in cnt) if (cnt[key] > 0) o[key] = cnt[key];
+      return o;
+    }
+
+    steps.push({
+      type: "init", left: 0, right: -1, s: 0, k, ans,
+      lines: [3, 4, 5, 6, 7],
+      desc: "nums = [" + nums.join(",") + "]，k = " + k + "。ans 初始为 n+1 = " + ans + "，cnt 为空，left=0，s=0。right 将从左到右扩展窗口。",
+      cnt: {}
+    });
+
+    for (let right = 0; right < n; right++) {
+      const val = nums[right];
+      cnt[val] = (cnt[val] || 0) + 1;
+      const becameOne = cnt[val] === 1;
+      if (becameOne) s += val;
+
+      steps.push({
+        type: "expand", left, right, val, becameOne, s, k, ans, cnt: snapshot(),
+        lines: becameOne ? [9, 10, 11] : [9, 10],
+        desc: "right 扩到 " + right + "，数值 " + val + " 的计数变为 " + cnt[val] +
+              (becameOne ? "，是第一次进入窗口，计入 s，s 变为 " + s + "。" : "，已在窗口中出现过，s 保持 " + s + "。")
+      });
+
+      while (s >= k) {
+        const len = right - left + 1;
+        const better = len < ans;
+        if (better) ans = len;
+
+        steps.push({
+          type: "record", left, right, s, k, ans, better, len, cnt: snapshot(),
+          lines: [12, 13],
+          desc: "s(" + s + ") &ge; k(" + k + ")，当前窗口长度 " + len +
+                (better ? "，比之前更短，刷新 ans = " + len + "。" : "，未小于当前 ans(" + ans + ")。")
+        });
+
+        const removedVal = nums[left];
+        cnt[removedVal] -= 1;
+        const becameZero = cnt[removedVal] === 0;
+        if (becameZero) s -= removedVal;
+        left += 1;
+
+        steps.push({
+          type: "shrink", left, right, removedVal, becameZero, s, k, ans, cnt: snapshot(),
+          lines: becameZero ? [14, 15, 16, 17] : [14, 15, 17],
+          desc: "收缩左端 nums[" + (left - 1) + "]=" + removedVal + "，其计数减到 " + (cnt[removedVal]) +
+                (becameZero ? "，减到 0，从 s 中移除，s 变为 " + s + "。" : "，仍大于 0，s 保持 " + s + "。") +
+                " left 右移到 " + left + "。"
+        });
+      }
+    }
+
+    steps.push({
+      type: "final", ans, n, k,
+      lines: [18],
+      desc: (ans > n)
+        ? "遍历结束，没有任何子数组的不同元素之和达到 k(" + k + ")，返回 -1。"
+        : "遍历结束，满足条件的最短子数组长度为 " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let nums = [5, 5, 4];
+  let k = 5;
+  let steps = simulate(nums, k);
+  let current = 0;
+  let playTimer = null;
+
+  function renderStage(step) {
+    const n = nums.length;
+    const parts = [];
+    const boxSize = Math.min(64, Math.floor(840 / n) - 8);
+    const gap = 10;
+    const totalW = n * (boxSize + gap) - gap;
+    const startX = (920 - totalW) / 2;
+    const boxY = 70;
+
+    function bx(idx) { return startX + idx * (boxSize + gap); }
+
+    const left = step.left, right = step.right;
+    const windowActive = right !== undefined && right >= 0 && left !== undefined && left <= right && step.type !== "final";
+    const isShrink = step.type === "shrink";
+    const isRecord = step.type === "record";
+    const matched = step.s !== undefined && step.k !== undefined && step.s >= step.k;
+
+    if (windowActive) {
+      const b0 = bx(left) - gap / 2;
+      const b1 = bx(right) + boxSize + gap / 2;
+      let bandColor = "var(--window-soft)", bandStroke = "var(--window)";
+      if (matched) { bandColor = "rgba(255,209,102,0.16)"; bandStroke = "var(--best)"; }
+      if (isShrink) { bandColor = "rgba(249,110,110,0.12)"; bandStroke = "var(--over)"; }
+      parts.push(
+        '<rect x="' + b0 + '" y="' + (boxY - 10) + '" width="' + (b1 - b0) + '" height="' + (boxSize + 20) +
+        '" rx="12" fill="' + bandColor + '" stroke="' + bandStroke + '" stroke-width="1.6" stroke-dasharray="6,4"/>'
+      );
+      parts.push(
+        '<text x="' + ((b0 + b1) / 2) + '" y="' + (boxY - 18) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + bandStroke +
+        '" text-anchor="middle">窗口 [' + nums.slice(left, right + 1).join(",") + ']，长度 ' + (right - left + 1) + '</text>'
+      );
+    }
+
+    for (let idx = 0; idx < n; idx++) {
+      const x0 = bx(idx);
+      const val = nums[idx];
+      const inWindow = windowActive && idx >= left && idx <= right;
+      const isLeft = windowActive && idx === left;
+      const isRight = windowActive && idx === right;
+      const isRemoving = isShrink && idx === left - 1;
+      const isIncoming = step.type === "expand" && idx === right;
+
+      let fill = inWindow ? "var(--box)" : "var(--box-dim)";
+      let opacity = inWindow ? "1" : "0.42";
+      let stroke = "#2c3766", strokeWidth = "1";
+      if (isIncoming && step.becameOne) { stroke = "var(--right-color)"; strokeWidth = "3"; fill = "rgba(61,220,151,0.16)"; opacity = "1"; }
+      else if (isRemoving) { stroke = "var(--over)"; strokeWidth = "2.5"; opacity = "0.6"; }
+      else if (isLeft && isRight) { stroke = "var(--window)"; strokeWidth = "2.5"; }
+      else if (isLeft) { stroke = "var(--left-color)"; strokeWidth = "2.5"; }
+      else if (isRight) { stroke = "var(--right-color)"; strokeWidth = "2.5"; }
+
+      parts.push(
+        '<rect x="' + x0 + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="' + Math.min(22, boxSize * 0.42) +
+        '" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + val + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize + 16) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    if (windowActive) {
+      const ay = boxY + boxSize + 38;
+      const lx = bx(left) + boxSize / 2;
+      const rx = bx(right) + boxSize / 2;
+      if (left === right) {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--window)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--window)" text-anchor="middle">l,r</text>');
+      } else {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--left-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--left-color)" text-anchor="middle">left</text>');
+        parts.push('<text x="' + rx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--right-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + rx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--right-color)" text-anchor="middle">right</text>');
+      }
+    }
+
+    if (step.type === "final") {
+      const label = step.ans > step.n ? "返回 -1" : "返回最短长度 = " + step.ans;
+      parts.push('<rect x="330" y="' + (boxY + 8) + '" width="260" height="34" rx="17" fill="rgba(255,209,102,0.10)" stroke="var(--best)" stroke-width="1.3"/>');
+      parts.push('<text x="460" y="' + (boxY + 30) + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--best)" text-anchor="middle">' + label + '</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function renderScore(step) {
+    const container = document.getElementById("score-row");
+    if (step.type === "init") {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    const matched = step.s >= step.k;
+    container.innerHTML =
+      '<span class="score-pill' + (matched ? " match" : "") + '">s ' + step.s + '</span>' +
+      '<span class="score-arrow">vs</span>' +
+      '<span class="score-pill">k ' + step.k + '</span>';
+  }
+
+  function renderCnt(step) {
+    const container = document.getElementById("cnt-list");
+    const cnt = step.cnt || {};
+    const keys = Object.keys(cnt);
+    if (keys.length === 0) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = keys.map((key) => {
+      let cls = "";
+      if (step.type === "expand" && step.becameOne && String(step.val) === key) cls = " added";
+      if (step.type === "shrink" && step.becameZero && String(step.removedVal) === key) cls = " removed";
+      return '<span class="cnt-pill' + cls + '">' + key + " : " + cnt[key] + "</span>";
+    }).join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+    renderScore(step);
+    renderCnt(step);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = (step.right !== undefined && step.right >= 0) ? step.right : "—";
+    document.getElementById("chip-sum").textContent = step.s !== undefined ? step.s : "—";
+    document.getElementById("chip-target").textContent = step.k !== undefined ? step.k : "—";
+    document.getElementById("chip-ans").textContent = (step.ans !== undefined && step.ans <= nums.length) ? step.ans : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  function reloadWith(arrStr, kStr) {
+    stopPlay();
+    const parsed = arrStr.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+    nums = parsed.length ? parsed : [1];
+    const parsedK = parseInt(kStr, 10);
+    k = isNaN(parsedK) ? 1 : parsedK;
+    steps = simulate(nums, k);
+    current = 0;
+    render();
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+  document.getElementById("input-arr").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+  document.getElementById("input-k").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1300);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && (document.activeElement.id === "input-arr" || document.activeElement.id === "input-k")) return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最长半重复子串 · 滑动窗口分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --left-color: #f9a826;
+    --right-color: #3ddc97;
+    --window: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --pair: #c86bfa;
+    --over: #f96e6e;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 25px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 180px;
+  }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(3, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.same .value { color: var(--pair); }
+  .chip.len .value { color: var(--window); }
+  .chip.ans .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Sliding Window · O(n) / O(1)</div>
+    <h1>最长半重复子串 —— 滑动窗口分步演示</h1>
+    <div class="sub">半重复：子串中最多允许一对相邻相同的数字。窗口维护相邻相同对的数量 same；right 扩张时若与前一位相同则 same +1，一旦 same 超过 1 就从左收缩到第一对之后。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数字串演示</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-str" value="52233" maxlength="22" />
+        <button id="btn-run" class="primary">运行这个字符串</button>
+      </div>
+
+      <svg class="stage-svg" viewBox="0 0 920 220" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--left-color)"></i>left</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right</span>
+        <span><i class="dot" style="background:var(--pair)"></i>相邻相同对</span>
+        <span><i class="dot" style="background:var(--best)"></i>刷新最长长度</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip same"><div class="label">SAME（对数）</div><div class="value" id="chip-same">0</div></div>
+        <div class="chip len"><div class="label">窗口长度</div><div class="value" id="chip-len">-</div></div>
+        <div class="chip ans"><div class="label">ANS（最长）</div><div class="value" id="chip-ans">1</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class Solution:",
+    "    def longestSemiRepetitiveSubstring(self, s: str) -> int:",
+    "        ans = 1",
+    "        left = 0",
+    "        same = 0        # 窗口内相邻相同对的数量",
+    "        for right in range(1, len(s)):",
+    "            if s[right] == s[right - 1]:",
+    "                same += 1",
+    "            if same > 1:            # 超过一对，收缩到第一对之后",
+    "                left += 1",
+    "                while s[left] != s[left - 1]:",
+    "                    left += 1",
+    "                same = 1",
+    "            ans = max(ans, right - left + 1)",
+    "        return ans"
+  ];
+
+  function simulate(s) {
+    const n = s.length;
+    const steps = [];
+
+    steps.push({
+      type: "init", left: 0, right: 0, same: 0, ans: 1,
+      lines: [3, 4, 5],
+      desc: 's = "' + s + '"。ans=1（单个字符一定是半重复），left=0，same=0。right 从 1 开始逐位扩展。'
+    });
+
+    if (n <= 1) {
+      steps.push({ type: "final", ans: 1, left: 0, right: n - 1, same: 0, lines: [14],
+        desc: "字符串长度 ≤ 1，直接返回 1。" });
+      return steps;
+    }
+
+    let ans = 1, left = 0, same = 0;
+
+    for (let right = 1; right < n; right++) {
+      const eq = s[right] === s[right - 1];
+      if (eq) same += 1;
+
+      steps.push({
+        type: "expand", left, right, same, eq,
+        lines: eq ? [6, 7, 8] : [6, 7],
+        desc: "right 扩到 " + right + "，比较 s[" + right + "]='" + s[right] + "' 与 s[" + (right - 1) + "]='" + s[right - 1] + "'：" +
+              (eq ? "相同，形成一对，same 增到 " + same + "。" : "不同，same 保持 " + same + "。")
+      });
+
+      if (same > 1) {
+        // move left past the first equal pair
+        let L = left + 1;
+        const scan = [];
+        while (s[L] !== s[L - 1]) { L += 1; }
+        const oldLeft = left;
+        left = L;
+        same = 1;
+        steps.push({
+          type: "shrink", left, right, same, oldLeft,
+          lines: [8, 9, 10, 11, 12],
+          desc: "same=2 超过一对。left 从 " + oldLeft + " 向右移动，跳过第一对相同数字，停在下标 " + left +
+                "（此处正好是保留下来的那一对的右端），窗口内只剩一对，same 重置为 1。"
+        });
+      }
+
+      const len = right - left + 1;
+      const better = len > ans;
+      const oldAns = ans;
+      if (better) ans = len;
+
+      steps.push({
+        type: "upd", left, right, same, len, ans, better,
+        lines: [6, 13],
+        desc: "当前窗口 \"" + s.slice(left, right + 1) + "\" 至多一对相同，长度 " + len +
+              (better ? "，比之前更长，刷新 ans = " + len + "。" : "，未超过当前 ans(" + oldAns + ")。")
+      });
+    }
+
+    steps.push({
+      type: "final", ans, left, right: n - 1, same,
+      lines: [14],
+      desc: "遍历结束，最长半重复子串的长度为 " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let s = "52233";
+  let steps = simulate(s);
+  let current = 0;
+  let playTimer = null;
+
+  function renderStage(step) {
+    const n = s.length;
+    const parts = [];
+    const boxSize = Math.min(66, Math.floor(840 / n) - 10);
+    const gap = 14;
+    const totalW = n * (boxSize + gap) - gap;
+    const startX = (920 - totalW) / 2;
+    const boxY = 76;
+
+    function bx(idx) { return startX + idx * (boxSize + gap); }
+
+    const left = step.left, right = step.right;
+    const windowActive = step.type !== "final" || true; // window always meaningful
+    const showWindow = left <= right;
+    const isUpd = step.type === "upd";
+    const isShrink = step.type === "shrink";
+
+    // window band
+    if (showWindow && step.type !== "final") {
+      const b0 = bx(left) - gap / 2;
+      const b1 = bx(right) + boxSize + gap / 2;
+      let bandColor = "var(--window-soft)", bandStroke = "var(--window)";
+      if (isUpd && step.better) { bandColor = "rgba(255,209,102,0.16)"; bandStroke = "var(--best)"; }
+      if (step.eq && step.same > 1) { bandColor = "rgba(249,110,110,0.12)"; bandStroke = "var(--over)"; }
+      if (isShrink) { bandColor = "rgba(200,107,250,0.12)"; bandStroke = "var(--pair)"; }
+      parts.push(
+        '<rect x="' + b0 + '" y="' + (boxY - 10) + '" width="' + (b1 - b0) + '" height="' + (boxSize + 20) +
+        '" rx="12" fill="' + bandColor + '" stroke="' + bandStroke + '" stroke-width="1.6" stroke-dasharray="6,4"/>'
+      );
+      parts.push(
+        '<text x="' + ((b0 + b1) / 2) + '" y="' + (boxY - 18) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + bandStroke +
+        '" text-anchor="middle">窗口 "' + s.slice(left, right + 1) + '"，same=' + step.same + '，长度 ' + (right - left + 1) + '</text>'
+      );
+    }
+
+    // adjacent-equal pair connectors (below boxes)
+    for (let i = 1; i < n; i++) {
+      if (s[i] === s[i - 1]) {
+        const inWindow = step.type !== "final" && i > left && i <= right;
+        const x1 = bx(i - 1) + boxSize / 2;
+        const x2 = bx(i) + boxSize / 2;
+        const py = boxY + boxSize + 8;
+        const col = inWindow ? "var(--pair)" : "#3a4468";
+        parts.push(
+          '<path d="M ' + x1 + ' ' + py + ' Q ' + ((x1 + x2) / 2) + ' ' + (py + 14) + ' ' + x2 + ' ' + py +
+          '" fill="none" stroke="' + col + '" stroke-width="' + (inWindow ? "2.5" : "1.5") + '"/>'
+        );
+        if (inWindow) {
+          parts.push(
+            '<text x="' + ((x1 + x2) / 2) + '" y="' + (py + 26) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--pair)" text-anchor="middle">相同</text>'
+          );
+        }
+      }
+    }
+
+    // boxes
+    for (let idx = 0; idx < n; idx++) {
+      const x = bx(idx);
+      const ch = s[idx];
+      const inWindow = step.type !== "final" && idx >= left && idx <= right;
+      const isLeft = step.type !== "final" && idx === left;
+      const isRight = step.type !== "final" && idx === right;
+
+      let fill = (inWindow || step.type === "final") ? "var(--box)" : "var(--box-dim)";
+      let opacity = (inWindow || step.type === "final") ? "1" : "0.42";
+      let stroke = "#2c3766", strokeWidth = "1";
+      if (isLeft && isRight) { stroke = "var(--window)"; strokeWidth = "2.5"; }
+      else if (isLeft) { stroke = "var(--left-color)"; strokeWidth = "2.5"; }
+      else if (isRight) { stroke = "var(--right-color)"; strokeWidth = "2.5"; }
+
+      parts.push(
+        '<rect x="' + x + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="' + Math.min(22, boxSize * 0.42) +
+        '" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + ch + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY - 26) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    // pointer arrows (above, since pairs are below)
+    if (step.type !== "final") {
+      const ay = boxY - 40;
+      const lx = bx(left) + boxSize / 2;
+      const rx = bx(right) + boxSize / 2;
+      if (left === right) {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--window)" text-anchor="middle">▼</text>');
+      } else {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--left-color)" text-anchor="middle">▼</text>');
+        parts.push('<text x="' + rx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--right-color)" text-anchor="middle">▼</text>');
+      }
+    }
+
+    if (step.type === "final") {
+      parts.push('<rect x="345" y="' + (boxY + boxSize / 2 - 17) + '" width="230" height="34" rx="17" fill="rgba(255,209,102,0.10)" stroke="var(--best)" stroke-width="1.3"/>');
+      parts.push('<text x="460" y="' + (boxY + boxSize / 2 + 5) + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--best)" text-anchor="middle">返回最长长度 = ' + step.ans + '</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = step.right !== undefined ? step.right : "—";
+    document.getElementById("chip-same").textContent = step.same !== undefined ? step.same : "—";
+    const lenEl = document.getElementById("chip-len");
+    lenEl.textContent = (step.type !== "final" && step.left <= step.right) ? (step.right - step.left + 1) : "—";
+    document.getElementById("chip-ans").textContent = step.ans !== undefined ? step.ans : 1;
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  function reloadWith(newStr) {
+    stopPlay();
+    const cleaned = (newStr || "").replace(/[^0-9]/g, "");
+    s = cleaned.length ? cleaned : "0";
+    steps = simulate(s);
+    current = 0;
+    render();
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    reloadWith(document.getElementById("input-str").value);
+  });
+  document.getElementById("input-str").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-str").value);
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1400);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && document.activeElement.id === "input-str") return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

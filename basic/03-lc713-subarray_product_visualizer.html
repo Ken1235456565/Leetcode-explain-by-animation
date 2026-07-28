@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>乘积小于 K 的子数组 · 滑动窗口分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --left-color: #f9a826;
+    --right-color: #3ddc97;
+    --window: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --over: #f96e6e;
+    --count: #6ee7a0;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 26px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .subs-box { margin-top: 14px; }
+  .subs-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .subs-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; }
+  .sub-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 600;
+    color: var(--count); background: rgba(110,231,160,0.1);
+    border: 1px solid rgba(110,231,160,0.35); border-radius: 999px; padding: 4px 12px;
+  }
+  .subs-empty { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ink-dim); }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(3, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.left .value { color: var(--left-color); }
+  .chip.right .value { color: var(--right-color); }
+  .chip.prod .value { color: var(--window); }
+  .chip.add .value { color: var(--count); }
+  .chip.ans .value { color: var(--count); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Sliding Window · O(n) / O(1)</div>
+    <h1>乘积小于 K 的子数组 —— 滑动窗口分步演示</h1>
+    <div class="sub">right 扩大窗口累乘；乘积一旦 ≥ k 就从 left 收缩。窗口合法后，以 right 结尾的合法子数组个数正好等于窗口长度，一次性计入答案。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数组演示</h2>
+      <svg class="stage-svg" viewBox="0 0 920 230" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--left-color)"></i>left</span>
+        <span><i class="dot" style="background:var(--right-color)"></i>right</span>
+        <span><i class="dot" style="background:var(--over)"></i>乘积 ≥ k（需收缩）</span>
+        <span><i class="dot" style="background:var(--count)"></i>本步计入的子数组</span>
+      </div>
+
+      <div class="chips">
+        <div class="chip left"><div class="label">LEFT</div><div class="value" id="chip-left">-</div></div>
+        <div class="chip right"><div class="label">RIGHT</div><div class="value" id="chip-right">-</div></div>
+        <div class="chip prod"><div class="label">窗口乘积</div><div class="value" id="chip-prod">1</div></div>
+        <div class="chip add"><div class="label">本步 +</div><div class="value" id="chip-add">-</div></div>
+        <div class="chip ans"><div class="label">ANS（总数）</div><div class="value" id="chip-ans">0</div></div>
+      </div>
+
+      <div class="subs-box">
+        <div class="subs-label">本步以 right 结尾、计入答案的子数组</div>
+        <div class="subs-list" id="subs-list"><span class="subs-empty">暂无</span></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const nums = [10, 5, 2, 6];
+  const k = 100;
+
+  const codeLines = [
+    "class Solution:",
+    "    def numSubarrayProductLessThanK(self, nums, k) -> int:",
+    "        if k <= 1:",
+    "            return 0                # 正整数乘积不可能 < 1",
+    "        ans = 0",
+    "        prod = 1",
+    "        left = 0",
+    "        for right in range(len(nums)):",
+    "            prod *= nums[right]           # 扩大窗口",
+    "            while prod >= k:              # 乘积超标，收缩",
+    "                prod //= nums[left]",
+    "                left += 1",
+    "            ans += right - left + 1       # 以 right 结尾的合法子数组数",
+    "        return ans"
+  ];
+
+  function simulate(nums, k) {
+    const n = nums.length;
+    const steps = [];
+
+    if (k <= 1) {
+      steps.push({ type: "final", ans: 0, left: 0, right: -1, prod: 1, lines: [3, 4],
+        desc: "k ≤ 1，正整数的乘积不可能小于 1，直接返回 0。" });
+      return steps;
+    }
+
+    let ans = 0, prod = 1, left = 0;
+
+    steps.push({
+      type: "init", left: 0, right: -1, prod: 1, ans: 0,
+      lines: [5, 6, 7, 8],
+      desc: "nums = [" + nums.join(", ") + "]，k = " + k + "。ans=0，窗口乘积 prod=1，left=0。"
+    });
+
+    for (let right = 0; right < n; right++) {
+      prod *= nums[right];
+      steps.push({
+        type: "expand", left, right, prod, ans,
+        lines: [8, 9],
+        desc: "right 扩到 " + right + "，乘以 nums[" + right + "]=" + nums[right] + "，窗口乘积 prod = " + prod +
+              (prod >= k ? "，达到或超过 k，需要收缩。" : "，仍小于 k(" + k + ")。")
+      });
+
+      while (prod >= k) {
+        const removed = nums[left];
+        const after = Math.floor(prod / removed);
+        steps.push({
+          type: "shrink", left, right, prod, removed, after, ans,
+          lines: [9, 10, 11],
+          desc: "prod=" + prod + " ≥ k，移出左端 nums[" + left + "]=" + removed + "，prod 变为 " + after +
+                "，left 右移到 " + (left + 1) + "。"
+        });
+        prod = after;
+        left += 1;
+      }
+
+      const add = right - left + 1;
+      ans += add;
+
+      const subs = [];
+      for (let s = left; s <= right; s++) subs.push(nums.slice(s, right + 1));
+
+      steps.push({
+        type: "count", left, right, prod, add, ans, subs,
+        lines: [8, 12],
+        desc: "窗口 [" + left + ", " + right + "] 乘积 " + prod + " < k，窗口内所有以 right 结尾的子数组乘积都 < k，" +
+              "共 " + add + " 个（窗口长度），计入答案，ans = " + ans + "。"
+      });
+    }
+
+    steps.push({
+      type: "final", ans, left, right: n - 1, prod,
+      lines: [13],
+      desc: "遍历结束，乘积小于 k 的连续子数组共有 " + ans + " 个。"
+    });
+
+    return steps;
+  }
+
+  const steps = simulate(nums, k);
+  const n = nums.length;
+  let current = 0;
+  let playTimer = null;
+
+  // ---- code panel ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- SVG geometry ----
+  const boxSize = 82, gap = 24, startX = 130;
+  const boxY = 84;
+
+  function boxX(idx) { return startX + idx * (boxSize + gap); }
+
+  function renderStage(step) {
+    const parts = [];
+    const left = step.left, right = step.right;
+    const windowActive = right >= 0 && left <= right && step.type !== "final";
+    const isCount = step.type === "count";
+    const isShrink = step.type === "shrink";
+    const overNow = step.type === "expand" && step.prod >= k;
+
+    // window band
+    if (windowActive) {
+      const b0 = boxX(left) - gap / 2;
+      const b1 = boxX(right) + boxSize + gap / 2;
+      let bandColor = "var(--window-soft)", bandStroke = "var(--window)";
+      if (isCount) { bandColor = "rgba(110,231,160,0.14)"; bandStroke = "var(--count)"; }
+      if (overNow || isShrink) { bandColor = "rgba(249,110,110,0.12)"; bandStroke = "var(--over)"; }
+      parts.push(
+        '<rect x="' + b0 + '" y="' + (boxY - 10) + '" width="' + (b1 - b0) + '" height="' + (boxSize + 20) +
+        '" rx="12" fill="' + bandColor + '" stroke="' + bandStroke + '" stroke-width="1.6" stroke-dasharray="6,4"/>'
+      );
+      parts.push(
+        '<text x="' + ((b0 + b1) / 2) + '" y="' + (boxY - 18) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + bandStroke +
+        '" text-anchor="middle">窗口乘积 = ' + step.prod + (isCount ? "  →  +" + step.add + " 个子数组" : "") + '</text>'
+      );
+    } else if (step.type === "init") {
+      parts.push('<text x="460" y="' + (boxY - 18) + '" font-family="JetBrains Mono, monospace" font-size="12" fill="var(--ink-dim)" text-anchor="middle">k = ' + k + '</text>');
+    }
+
+    // boxes
+    for (let idx = 0; idx < n; idx++) {
+      const x = boxX(idx);
+      const inWindow = windowActive && idx >= left && idx <= right;
+      const isLeft = windowActive && idx === left;
+      const isRight = windowActive && idx === right;
+      const isRemoving = isShrink && idx === left;
+
+      let fill = inWindow ? "var(--box)" : "var(--box-dim)";
+      let opacity = inWindow ? "1" : "0.45";
+      let stroke = "#2c3766", strokeWidth = "1";
+      if (isRemoving) { stroke = "var(--over)"; strokeWidth = "3"; }
+      else if (isLeft && isRight) { stroke = "var(--window)"; strokeWidth = "2.5"; }
+      else if (isLeft) { stroke = "var(--left-color)"; strokeWidth = "2.5"; }
+      else if (isRight) { stroke = "var(--right-color)"; strokeWidth = "2.5"; }
+
+      parts.push(
+        '<rect x="' + x + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="20" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + nums[idx] + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x + boxSize / 2) + '" y="' + (boxY + boxSize + 18) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    // pointer arrows
+    if (windowActive) {
+      const ay = boxY + boxSize + 40;
+      const lx = boxX(left) + boxSize / 2;
+      const rx = boxX(right) + boxSize / 2;
+      if (left === right) {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--window)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--window)" text-anchor="middle">l,r</text>');
+      } else {
+        parts.push('<text x="' + lx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--left-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + lx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--left-color)" text-anchor="middle">left</text>');
+        parts.push('<text x="' + rx + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--right-color)" text-anchor="middle">▲</text>');
+        parts.push('<text x="' + rx + '" y="' + (ay + 14) + '" font-family="JetBrains Mono, monospace" font-size="10.5" fill="var(--right-color)" text-anchor="middle">right</text>');
+      }
+    }
+
+    if (step.type === "final") {
+      parts.push('<rect x="335" y="' + (boxY + 16) + '" width="250" height="34" rx="17" fill="rgba(110,231,160,0.10)" stroke="var(--count)" stroke-width="1.3"/>');
+      parts.push('<text x="460" y="' + (boxY + 38) + '" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700" fill="var(--count)" text-anchor="middle">返回子数组个数 = ' + step.ans + '</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function renderSubs(step) {
+    const container = document.getElementById("subs-list");
+    if (step.type === "count" && step.subs && step.subs.length) {
+      container.innerHTML = step.subs.map((arr) => '<span class="sub-pill">[' + arr.join(", ") + ']</span>').join("");
+    } else {
+      container.innerHTML = '<span class="subs-empty">暂无</span>';
+    }
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+    renderSubs(step);
+
+    document.getElementById("chip-left").textContent = step.left !== undefined ? step.left : "—";
+    document.getElementById("chip-right").textContent = (step.right !== undefined && step.right >= 0) ? step.right : "—";
+    document.getElementById("chip-prod").textContent = step.prod !== undefined ? step.prod : "—";
+    document.getElementById("chip-add").textContent = step.type === "count" ? ("+" + step.add) : "—";
+    document.getElementById("chip-ans").textContent = step.ans !== undefined ? step.ans : 0;
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1500);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
