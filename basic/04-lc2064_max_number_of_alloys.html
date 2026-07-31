@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>合金的最大数量 · 二分答案分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --lo-color: #f9a826;
+    --hi-color: #3ddc97;
+    --mid-color: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --over: #f96e6e;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 25px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 220px;
+  }
+  input.budget-input { flex: 0 0 110px; min-width: 90px; }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .phase-tag {
+    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--panel-border); color: var(--ink-dim); margin-bottom: 10px;
+  }
+  .phase-tag.active { color: var(--mid-color); border-color: var(--mid-color); background: rgba(91,192,235,0.10); }
+
+  .desc-box {
+    margin-top: 12px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .score-box { margin-top: 14px; }
+  .score-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .score-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .score-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .score-pill.ok { color: var(--best); border-color: var(--best); background: rgba(255,209,102,0.12); }
+  .score-pill.bad { color: var(--over); border-color: var(--over); background: rgba(249,110,110,0.12); }
+  .score-arrow { color: var(--ink-dim); font-size: 13px; }
+
+  .cnt-box { margin-top: 14px; }
+  .cnt-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .cnt-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+  .cnt-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .cnt-pill.done { color: var(--best); border-color: var(--best); background: rgba(255,209,102,0.12); }
+  .cnt-pill.over { color: var(--over); border-color: var(--over); background: rgba(249,110,110,0.12); }
+  .cnt-empty { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ink-dim); }
+
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(2, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.lo .value { color: var(--lo-color); }
+  .chip.hi .value { color: var(--hi-color); }
+  .chip.mid .value { color: var(--mid-color); }
+  .chip.ans .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Binary Search on Answer · O(k · n · log(budget))</div>
+    <h1>合金的最大数量 —— 二分答案分步演示</h1>
+    <div class="sub">对每台机器分别二分答案 x（用这台机器最多能造多少个合金）。数量越多所需花费越高，具有单调性：对候选数量 mid，逐种金属计算还需要额外购买多少、花费多少，一旦累计花费超过预算就判定 mid 不可行；可行则尝试更大的 x，不可行则尝试更小的 x。所有机器算完后取最大值。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>机器与金属库存</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-comp" value="1,1,1;1,1,10" maxlength="80" />
+      </div>
+      <div class="cnt-label" style="margin-bottom:6px;">composition：每台机器一组，用分号分隔，每组内各金属配比用逗号分隔</div>
+      <div class="input-row">
+        <input type="text" id="input-stock" value="0,0,0" maxlength="60" />
+      </div>
+      <div class="cnt-label" style="margin-bottom:6px;">stock：各金属当前库存</div>
+      <div class="input-row">
+        <input type="text" id="input-cost" value="1,2,3" maxlength="60" />
+        <input type="text" id="input-budget" class="budget-input" value="15" maxlength="10" />
+        <button id="btn-run" class="primary">运行该输入</button>
+      </div>
+      <div class="cnt-label" style="margin-bottom:8px;">cost：各金属单价，budget：预算</div>
+
+      <svg class="stage-svg" viewBox="0 0 920 130" id="stage-speed"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--lo-color)"></i>lo（当前已知可行的最大数量）</span>
+        <span><i class="dot" style="background:var(--hi-color)"></i>hi（当前已知不可行的上界）</span>
+        <span><i class="dot" style="background:var(--mid-color)"></i>mid（本轮尝试数量）</span>
+        <span><i class="dot" style="background:var(--best)"></i>总花费未超预算，mid 可行</span>
+      </div>
+
+      <div style="margin-top:14px;">
+        <span class="phase-tag" id="phase-tag">阶段</span>
+      </div>
+
+      <div class="score-box">
+        <div class="score-label">累计花费 total 与 budget 的比较</div>
+        <div class="score-row" id="score-row"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">各金属在数量 mid 下的需求与额外花费</div>
+        <div class="cnt-list" id="metal-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">各机器已得到的最大数量</div>
+        <div class="cnt-list" id="machine-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="chips">
+        <div class="chip lo"><div class="label">LO</div><div class="value" id="chip-lo">-</div></div>
+        <div class="chip hi"><div class="label">HI</div><div class="value" id="chip-hi">-</div></div>
+        <div class="chip mid"><div class="label">MID</div><div class="value" id="chip-mid">-</div></div>
+        <div class="chip ans"><div class="label">最终答案</div><div class="value" id="chip-ans">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class Solution:",
+    "    def maxNumberOfAlloys(self, n, k, budget, composition, stock, cost):",
+    "        ans = 0",
+    "        for comp in composition:",
+    "            lo, hi = 0, budget + max(stock) + 1",
+    "            while lo < hi:",
+    "                mid = (lo + hi + 1) // 2",
+    "                total = 0",
+    "                feasible = True",
+    "                for j in range(n):",
+    "                    need = comp[j] * mid",
+    "                    if need > stock[j]:",
+    "                        total += (need - stock[j]) * cost[j]",
+    "                        if total > budget:",
+    "                            feasible = False",
+    "                            break",
+    "                if feasible:",
+    "                    lo = mid",
+    "                else:",
+    "                    hi = mid - 1",
+    "            ans = max(ans, lo)",
+    "        return ans"
+  ];
+
+  function evalMid(comp, stock, cost, budget, mid) {
+    const n = comp.length;
+    let total = 0;
+    let feasible = true;
+    const metals = [];
+    for (let j = 0; j < n; j++) {
+      const need = comp[j] * mid;
+      let extraCost = 0;
+      let broke = false;
+      if (need > stock[j]) {
+        extraCost = (need - stock[j]) * cost[j];
+        total += extraCost;
+        if (total > budget) { feasible = false; broke = true; }
+      }
+      metals.push({ j, need, extraCost, broke });
+      if (broke) break;
+    }
+    return { total, feasible, metals };
+  }
+
+  function simulate(composition, stock, cost, budget) {
+    const n = stock.length;
+    const hiInit = budget + Math.max(...stock) + 1;
+    const steps = [];
+    let ans = 0;
+    const machineResults = [];
+
+    composition.forEach((comp, mIdx) => {
+      let lo = 0, hi = hiInit;
+
+      steps.push({
+        type: "phase-init", mIdx, comp, lo, hi, hiInit, ans, machineResults: machineResults.slice(),
+        lines: [5],
+        desc: "处理机器 #" + mIdx + "，配比 comp = [" + comp.join(",") + "]。lo = 0，hi = budget + max(stock) + 1 = " + hiInit + "。"
+      });
+
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi + 1) / 2);
+        const { total, feasible, metals } = evalMid(comp, stock, cost, budget, mid);
+
+        steps.push({
+          type: "mid", mIdx, comp, lo, hi, mid, total, feasible, metals, ans, machineResults: machineResults.slice(),
+          lines: [7, 8, 9, 10, 11, 12, 13, 14, 15],
+          desc: "尝试数量 mid = (" + lo + "+" + hi + "+1)//2 = " + mid + "。逐种金属计算需求与额外花费，累计 total = " + total +
+                "，与 budget(" + budget + ") 比较" + (feasible ? "，未超支。" : "，超支了。")
+        });
+
+        if (feasible) {
+          lo = mid;
+          steps.push({
+            type: "feasible", mIdx, comp, lo, hi, mid, total, ans, machineResults: machineResults.slice(),
+            lines: [16, 17],
+            desc: "总花费 " + total + " 未超过预算(" + budget + ")，数量 " + mid + " 可行，尝试更大的数量，lo = mid = " + lo + "。"
+          });
+        } else {
+          hi = mid - 1;
+          steps.push({
+            type: "infeasible", mIdx, comp, lo, hi, mid, total, ans, machineResults: machineResults.slice(),
+            lines: [18, 19],
+            desc: "总花费超过预算(" + budget + ")，数量 " + mid + " 不可行，收缩 hi = mid-1 = " + hi + "。"
+          });
+        }
+      }
+
+      const before = ans;
+      ans = Math.max(ans, lo);
+      machineResults.push({ mIdx, best: lo });
+
+      steps.push({
+        type: "phase-done", mIdx, best: lo, ans, before, machineResults: machineResults.slice(),
+        lines: [20],
+        desc: "机器 #" + mIdx + " 二分结束，lo = " + lo + "，即这台机器最多能造 " + lo + " 个合金。ans = max(" + before + ", " + lo + ") = " + ans + "。"
+      });
+    });
+
+    steps.push({
+      type: "final", ans, machineResults: machineResults.slice(),
+      lines: [21],
+      desc: "所有机器处理完毕，返回 ans = " + ans + "。"
+    });
+
+    return steps;
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let composition = [[1, 1, 1], [1, 1, 10]];
+  let stock = [0, 0, 0];
+  let cost = [1, 2, 3];
+  let budget = 15;
+  let steps = simulate(composition, stock, cost, budget);
+  let current = 0;
+  let playTimer = null;
+
+  function renderSpeedLine(step) {
+    const hiInit = step.hiInit || (budget + Math.max(...stock) + 1);
+    const parts = [];
+    const left = 40, right = 880;
+    const width = right - left;
+    const y = 60;
+
+    function sx(v) { return left + v / (hiInit || 1) * width; }
+
+    parts.push('<line x1="' + left + '" y1="' + y + '" x2="' + right + '" y2="' + y + '" stroke="#2c3766" stroke-width="2"/>');
+    parts.push('<text x="' + left + '" y="' + (y - 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)">0</text>');
+    parts.push('<text x="' + right + '" y="' + (y - 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)" text-anchor="end">' + hiInit + '</text>');
+
+    const lo = step.lo, hi = step.hi;
+    if (lo !== undefined && hi !== undefined && step.type !== "final" && step.type !== "phase-done") {
+      const x0 = sx(lo), x1 = sx(hi);
+      parts.push('<rect x="' + x0 + '" y="' + (y - 6) + '" width="' + Math.max(2, x1 - x0) + '" height="12" rx="6" fill="var(--window-soft)" stroke="var(--mid-color)" stroke-width="1.4"/>');
+      parts.push('<circle cx="' + x0 + '" cy="' + y + '" r="6" fill="var(--lo-color)"/>');
+      parts.push('<text x="' + x0 + '" y="' + (y + 26) + '" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="var(--lo-color)" text-anchor="middle">lo=' + lo + '</text>');
+      parts.push('<circle cx="' + x1 + '" cy="' + y + '" r="6" fill="var(--hi-color)"/>');
+      parts.push('<text x="' + x1 + '" y="' + (y + 26) + '" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="var(--hi-color)" text-anchor="middle">hi=' + hi + '</text>');
+
+      if (step.mid !== undefined) {
+        const xm = sx(step.mid);
+        let midColor = "var(--mid-color)";
+        if (step.type === "feasible") midColor = "var(--best)";
+        if (step.type === "infeasible") midColor = "var(--over)";
+        parts.push('<circle cx="' + xm + '" cy="' + y + '" r="8" fill="' + midColor + '"/>');
+        parts.push('<text x="' + xm + '" y="' + (y - 20) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + midColor + '" text-anchor="middle">mid=' + step.mid + '</text>');
+      }
+    } else if (step.type === "phase-done") {
+      const xa = sx(step.best);
+      parts.push('<circle cx="' + xa + '" cy="' + y + '" r="8" fill="var(--best)"/>');
+      parts.push('<text x="' + xa + '" y="' + (y - 20) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="var(--best)" text-anchor="middle">机器#' + step.mIdx + ' 最大值=' + step.best + '</text>');
+    } else if (step.type === "final") {
+      const xa = sx(step.ans);
+      parts.push('<circle cx="' + xa + '" cy="' + y + '" r="9" fill="var(--best)"/>');
+      parts.push('<text x="' + xa + '" y="' + (y - 20) + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--best)" text-anchor="middle">最终答案 = ' + step.ans + '</text>');
+    }
+
+    document.getElementById("stage-speed").innerHTML = parts.join("");
+  }
+
+  function renderScore(step) {
+    const container = document.getElementById("score-row");
+    if (step.total === undefined) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    const ok = step.feasible !== undefined ? step.feasible : step.total <= budget;
+    container.innerHTML =
+      '<span class="score-pill' + (ok ? " ok" : " bad") + '">total ' + step.total + '</span>' +
+      '<span class="score-arrow">vs</span>' +
+      '<span class="score-pill">budget ' + budget + '</span>';
+  }
+
+  function renderMetalList(step) {
+    const container = document.getElementById("metal-list");
+    if (!step.metals) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = step.metals.map((m) =>
+      '<span class="cnt-pill' + (m.broke ? " over" : "") + '">金属[' + m.j + ']: need=' + m.need + ', stock=' + stock[m.j] + ', 额外花费=' + m.extraCost + '</span>'
+    ).join("");
+  }
+
+  function renderMachineList(step) {
+    const container = document.getElementById("machine-list");
+    const list = step.machineResults || [];
+    if (list.length === 0) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = list.map((r) => '<span class="cnt-pill done">机器[' + r.mIdx + '] 最大值 = ' + r.best + '</span>').join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderSpeedLine(step);
+    highlightLines(step.lines);
+    renderScore(step);
+    renderMetalList(step);
+    renderMachineList(step);
+
+    const tag = document.getElementById("phase-tag");
+    if (step.type === "final") {
+      tag.textContent = "结果";
+      tag.className = "phase-tag";
+    } else {
+      tag.textContent = "阶段：机器 #" + step.mIdx + "（comp = [" + step.comp.join(",") + "]）";
+      tag.className = "phase-tag active";
+    }
+
+    document.getElementById("chip-lo").textContent = step.lo !== undefined ? step.lo : "—";
+    document.getElementById("chip-hi").textContent = step.hi !== undefined ? step.hi : "—";
+    document.getElementById("chip-mid").textContent = step.mid !== undefined ? step.mid : "—";
+    document.getElementById("chip-ans").textContent = step.type === "final" ? step.ans : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  function reloadWith(compStr, stockStr, costStr, budgetStr) {
+    stopPlay();
+    const parsedComp = compStr.split(";").map(g => g.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v))).filter(g => g.length);
+    const parsedStock = stockStr.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+    const parsedCost = costStr.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+    const parsedBudget = parseInt(budgetStr, 10);
+
+    if (!parsedComp.length || !parsedStock.length || !parsedCost.length || isNaN(parsedBudget)) return;
+
+    composition = parsedComp;
+    stock = parsedStock;
+    cost = parsedCost;
+    budget = parsedBudget;
+    steps = simulate(composition, stock, cost, budget);
+    current = 0;
+    render();
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    reloadWith(
+      document.getElementById("input-comp").value,
+      document.getElementById("input-stock").value,
+      document.getElementById("input-cost").value,
+      document.getElementById("input-budget").value
+    );
+  });
+  ["input-comp", "input-stock", "input-cost", "input-budget"].forEach((id) => {
+    document.getElementById(id).addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("btn-run").click();
+    });
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1500);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && ["input-comp", "input-stock", "input-cost", "input-budget"].includes(document.activeElement.id)) return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

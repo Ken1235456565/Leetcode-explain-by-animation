@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美味糖果的最大甜蜜度 · 二分答案分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --lo-color: #f9a826;
+    --hi-color: #3ddc97;
+    --mid-color: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --over: #f96e6e;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 25px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 160px;
+  }
+  input.k-input { flex: 0 0 90px; min-width: 70px; }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .desc-box {
+    margin-top: 16px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .score-box { margin-top: 14px; }
+  .score-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .score-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .score-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .score-pill.ok { color: var(--best); border-color: var(--best); background: rgba(255,209,102,0.12); }
+  .score-pill.bad { color: var(--over); border-color: var(--over); background: rgba(249,110,110,0.12); }
+  .score-arrow { color: var(--ink-dim); font-size: 13px; }
+
+  .cnt-box { margin-top: 14px; }
+  .cnt-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .cnt-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+  .cnt-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .cnt-empty { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ink-dim); }
+
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 560px) { .chips { grid-template-columns: repeat(2, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.lo .value { color: var(--lo-color); }
+  .chip.hi .value { color: var(--hi-color); }
+  .chip.mid .value { color: var(--mid-color); }
+  .chip.ans .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Binary Search on Answer · Greedy Check · O(n log(maxPrice))</div>
+    <h1>美味糖果的最大甜蜜度 —— 二分答案分步演示</h1>
+    <div class="sub">价格先排序。直接对"最小甜蜜度 d"二分答案：d 越大，能挑出的糖果越少，具有单调性。对候选 d，贪心地从最小价格开始挑选：只要当前糖果与上一个选中的糖果价差不小于 d 就选中它；若最终选中的数量达到 k，说明 d 可行，尝试更大的 d；否则 d 太大，尝试更小的 d。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>价格数组</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-arr" value="13,5,1,8,21,2" maxlength="60" />
+        <input type="text" id="input-k" class="k-input" value="3" maxlength="8" />
+        <button id="btn-run" class="primary">运行该输入</button>
+      </div>
+
+      <svg class="stage-svg" viewBox="0 0 920 130" id="stage-speed"></svg>
+      <svg class="stage-svg" viewBox="0 0 920 150" id="stage-piles" style="margin-top:6px;"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--lo-color)"></i>lo（已知可行的最小甜蜜度）</span>
+        <span><i class="dot" style="background:var(--hi-color)"></i>hi（已知不可行的上界）</span>
+        <span><i class="dot" style="background:var(--mid-color)"></i>mid（本轮尝试的甜蜜度）</span>
+        <span><i class="dot" style="background:var(--best)"></i>被贪心选中的糖果</span>
+      </div>
+
+      <div class="score-box">
+        <div class="score-label">贪心选中数量 count 与 k 的比较</div>
+        <div class="score-row" id="score-row"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">逐个糖果的选取判断</div>
+        <div class="cnt-list" id="pile-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="chips">
+        <div class="chip lo"><div class="label">LO</div><div class="value" id="chip-lo">-</div></div>
+        <div class="chip hi"><div class="label">HI</div><div class="value" id="chip-hi">-</div></div>
+        <div class="chip mid"><div class="label">MID</div><div class="value" id="chip-mid">-</div></div>
+        <div class="chip ans"><div class="label">最终答案</div><div class="value" id="chip-ans">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class Solution:",
+    "    def maximumTastiness(self, price: List[int], k: int) -> int:",
+    "        price.sort()",
+    "        def feasible(d):",
+    "            count = 1",
+    "            last = price[0]",
+    "            for p in price[1:]:",
+    "                if p - last >= d:",
+    "                    count += 1",
+    "                    last = p",
+    "            return count >= k",
+    "        lo, hi = 0, price[-1] - price[0]",
+    "        while lo < hi:",
+    "            mid = (lo + hi + 1) // 2",
+    "            if feasible(mid):",
+    "                lo = mid",
+    "            else:",
+    "                hi = mid - 1",
+    "        return lo"
+  ];
+
+  function evalFeasible(price, d, k) {
+    let count = 1, last = price[0];
+    const picks = [{ idx: 0, val: price[0], picked: true, gap: null }];
+    for (let i = 1; i < price.length; i++) {
+      const p = price[i];
+      const gap = p - last;
+      if (gap >= d) {
+        count += 1;
+        last = p;
+        picks.push({ idx: i, val: p, picked: true, gap });
+      } else {
+        picks.push({ idx: i, val: p, picked: false, gap });
+      }
+    }
+    return { count, picks, feasible: count >= k };
+  }
+
+  function simulate(priceRaw, k) {
+    const price = priceRaw.slice().sort((a, b) => a - b);
+    const n = price.length;
+    const hiInit = price[n - 1] - price[0];
+    const steps = [];
+    let lo = 0, hi = hiInit;
+
+    steps.push({
+      type: "init", price, lo, hi, hiInit,
+      lines: [3, 11],
+      desc: "price 排序后为 [" + price.join(",") + "]。甜蜜度的可行范围是 [0, price[-1]-price[0]] = [0, " + hiInit + "]。lo = 0，hi = " + hiInit + "。"
+    });
+
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi + 1) / 2);
+      const { count, picks, feasible } = evalFeasible(price, mid, k);
+
+      steps.push({
+        type: "mid", price, lo, hi, mid, picks, count, feasible, hiInit,
+        lines: [5, 6, 7, 8, 9, 10],
+        desc: "尝试甜蜜度 mid = (" + lo + "+" + hi + "+1)//2 = " + mid + "。贪心挑选后共选中 " + count + " 颗糖果，与 k(" + k + ") 比较" +
+              (feasible ? "，已达到。" : "，还不够。")
+      });
+
+      if (feasible) {
+        lo = mid;
+        steps.push({
+          type: "feasible", price, lo, hi, mid, count, hiInit,
+          lines: [14, 15],
+          desc: "选中数量 " + count + " &ge; k(" + k + ")，甜蜜度 " + mid + " 可行，尝试更大的甜蜜度，lo = mid = " + lo + "。"
+        });
+      } else {
+        hi = mid - 1;
+        steps.push({
+          type: "infeasible", price, lo, hi, mid, count, hiInit,
+          lines: [16, 17],
+          desc: "选中数量 " + count + " 未达到 k(" + k + ")，甜蜜度 " + mid + " 太大，收缩 hi = mid-1 = " + hi + "。"
+        });
+      }
+    }
+
+    steps.push({
+      type: "final", price, ans: lo, hiInit,
+      lines: [18],
+      desc: "lo == hi = " + lo + "，二分结束。最大可能的甜蜜度为 " + lo + "。"
+    });
+
+    return steps;
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let priceInput = [13, 5, 1, 8, 21, 2];
+  let k = 3;
+  let steps = simulate(priceInput, k);
+  let current = 0;
+  let playTimer = null;
+
+  function renderSpeedLine(step) {
+    const hiInit = step.hiInit;
+    const parts = [];
+    const left = 40, right = 880;
+    const width = right - left;
+    const y = 60;
+
+    function sx(v) { return left + v / (hiInit || 1) * width; }
+
+    parts.push('<line x1="' + left + '" y1="' + y + '" x2="' + right + '" y2="' + y + '" stroke="#2c3766" stroke-width="2"/>');
+    parts.push('<text x="' + left + '" y="' + (y - 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)">0</text>');
+    parts.push('<text x="' + right + '" y="' + (y - 14) + '" font-family="JetBrains Mono, monospace" font-size="11" fill="var(--ink-dim)" text-anchor="end">' + hiInit + '</text>');
+
+    const lo = step.lo, hi = step.hi;
+    if (lo !== undefined && hi !== undefined && step.type !== "final") {
+      const x0 = sx(lo), x1 = sx(hi);
+      parts.push('<rect x="' + x0 + '" y="' + (y - 6) + '" width="' + Math.max(2, x1 - x0) + '" height="12" rx="6" fill="var(--window-soft)" stroke="var(--mid-color)" stroke-width="1.4"/>');
+      parts.push('<circle cx="' + x0 + '" cy="' + y + '" r="6" fill="var(--lo-color)"/>');
+      parts.push('<text x="' + x0 + '" y="' + (y + 26) + '" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="var(--lo-color)" text-anchor="middle">lo=' + lo + '</text>');
+      parts.push('<circle cx="' + x1 + '" cy="' + y + '" r="6" fill="var(--hi-color)"/>');
+      parts.push('<text x="' + x1 + '" y="' + (y + 26) + '" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="var(--hi-color)" text-anchor="middle">hi=' + hi + '</text>');
+
+      if (step.mid !== undefined) {
+        const xm = sx(step.mid);
+        let midColor = "var(--mid-color)";
+        if (step.type === "feasible") midColor = "var(--best)";
+        if (step.type === "infeasible") midColor = "var(--over)";
+        parts.push('<circle cx="' + xm + '" cy="' + y + '" r="8" fill="' + midColor + '"/>');
+        parts.push('<text x="' + xm + '" y="' + (y - 20) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="' + midColor + '" text-anchor="middle">mid=' + step.mid + '</text>');
+      }
+    } else if (step.type === "final") {
+      const xa = sx(step.ans);
+      parts.push('<circle cx="' + xa + '" cy="' + y + '" r="9" fill="var(--best)"/>');
+      parts.push('<text x="' + xa + '" y="' + (y - 20) + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--best)" text-anchor="middle">答案 = ' + step.ans + '</text>');
+    }
+
+    document.getElementById("stage-speed").innerHTML = parts.join("");
+  }
+
+  function renderPilesStage(step) {
+    const price = step.price;
+    const n = price.length;
+    const parts = [];
+    const boxSize = Math.min(64, Math.floor(880 / n) - 8);
+    const gap = 8;
+    const totalW = n * (boxSize + gap) - gap;
+    const startX = (920 - totalW) / 2;
+    const boxY = 30;
+
+    function bx(idx) { return startX + idx * (boxSize + gap); }
+
+    const picks = step.picks;
+
+    for (let idx = 0; idx < n; idx++) {
+      const x0 = bx(idx);
+      const val = price[idx];
+      let fill = "var(--box-dim)", stroke = "#2c3766", opacity = "0.5";
+
+      if (picks) {
+        const p = picks[idx];
+        if (p.picked) { fill = "rgba(255,209,102,0.18)"; stroke = "var(--best)"; opacity = "1"; }
+        else { fill = "var(--box-dim)"; stroke = "#2c3766"; opacity = "0.5"; }
+      }
+
+      parts.push(
+        '<rect x="' + x0 + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="8" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="' + Math.min(18, boxSize * 0.36) +
+        '" font-weight="700" fill="var(--ink)" text-anchor="middle">' + val + '</text>'
+      );
+
+      if (picks && picks[idx].gap !== null && picks[idx].gap !== undefined) {
+        parts.push(
+          '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize + 18) + '" font-family="JetBrains Mono, monospace" font-size="10" fill="var(--ink-dim)" text-anchor="middle">Δ=' + picks[idx].gap + '</text>'
+        );
+      }
+    }
+
+    document.getElementById("stage-piles").innerHTML = parts.join("");
+  }
+
+  function renderScore(step) {
+    const container = document.getElementById("score-row");
+    if (step.count === undefined) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    const ok = step.feasible !== undefined ? step.feasible : step.count >= k;
+    container.innerHTML =
+      '<span class="score-pill' + (ok ? " ok" : " bad") + '">count ' + step.count + '</span>' +
+      '<span class="score-arrow">vs</span>' +
+      '<span class="score-pill">k ' + k + '</span>';
+  }
+
+  function renderPileList(step) {
+    const container = document.getElementById("pile-list");
+    if (!step.picks) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = step.picks.map((p) =>
+      '<span class="cnt-pill" style="' + (p.picked ? "color:var(--best);border-color:var(--best);background:rgba(255,209,102,0.10);" : "") + '">' +
+      p.val + (p.gap !== null ? (' (Δ=' + p.gap + ')') : '') + (p.picked ? ' 选中' : ' 跳过') + '</span>'
+    ).join("");
+  }
+
+  function render() {
+    const step = steps[current];
+
+    renderSpeedLine(step);
+    renderPilesStage(step);
+    highlightLines(step.lines);
+    renderScore(step);
+    renderPileList(step);
+
+    document.getElementById("chip-lo").textContent = step.lo !== undefined ? step.lo : "—";
+    document.getElementById("chip-hi").textContent = step.hi !== undefined ? step.hi : "—";
+    document.getElementById("chip-mid").textContent = step.mid !== undefined ? step.mid : "—";
+    document.getElementById("chip-ans").textContent = step.type === "final" ? step.ans : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  function reloadWith(arrStr, kStr) {
+    stopPlay();
+    const parsed = arrStr.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+    priceInput = parsed.length ? parsed : [0];
+    const parsedK = parseInt(kStr, 10);
+    k = isNaN(parsedK) ? 2 : parsedK;
+    steps = simulate(priceInput, k);
+    current = 0;
+    render();
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+  document.getElementById("input-arr").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+  document.getElementById("input-k").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") reloadWith(document.getElementById("input-arr").value, document.getElementById("input-k").value);
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1400);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && ["input-arr", "input-k"].includes(document.activeElement.id)) return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

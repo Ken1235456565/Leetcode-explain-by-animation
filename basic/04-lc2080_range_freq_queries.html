@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>区间频率查询 · 哈希表 + 二分查找分步演示</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b132b;
+    --panel: #121a3a;
+    --panel-border: #26315e;
+    --ink: #e8eef4;
+    --ink-dim: #93a1c2;
+    --box: #1a2350;
+    --box-dim: #14193a;
+    --lo-color: #f9a826;
+    --hi-color: #3ddc97;
+    --mid-color: #5bc0eb;
+    --window-soft: rgba(91,192,235,0.15);
+    --over: #f96e6e;
+    --best: #ffd166;
+    --accent: #5bc0eb;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: radial-gradient(ellipse at top, #101a3f 0%, var(--bg) 55%);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { margin-bottom: 22px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase;
+  }
+  h1 { font-size: 25px; font-weight: 700; margin: 6px 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-dim); font-size: 14px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 18px 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ink-dim); margin: 0 0 12px;
+  }
+
+  .stage-svg { width: 100%; height: auto; display: block; }
+
+  .input-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  input[type=text] {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--ink); background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 12px; flex: 1; min-width: 200px;
+  }
+  .controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  button {
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #1a2350; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 9px 14px; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  button:hover:not(:disabled) { background: #232d5e; }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: #051424; border-color: var(--accent); }
+  button.primary:hover:not(:disabled) { background: #8fd8f5; }
+
+  .step-counter {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--ink-dim); margin-left: auto; white-space: nowrap;
+  }
+
+  .phase-tag {
+    display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.06em; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--panel-border); color: var(--ink-dim); margin-bottom: 10px;
+  }
+  .phase-tag.build { color: var(--lo-color); border-color: var(--lo-color); background: rgba(249,168,38,0.10); }
+  .phase-tag.lo { color: var(--mid-color); border-color: var(--mid-color); background: rgba(91,192,235,0.10); }
+  .phase-tag.hi { color: var(--hi-color); border-color: var(--hi-color); background: rgba(61,220,151,0.10); }
+
+  .desc-box {
+    margin-top: 12px; padding: 13px 15px; background: #0e1636;
+    border: 1px solid var(--panel-border); border-left: 3px solid var(--accent);
+    border-radius: 8px; font-size: 13.5px; line-height: 1.7; color: var(--ink);
+    min-height: 60px;
+  }
+
+  .cnt-box { margin-top: 14px; }
+  .cnt-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-dim); letter-spacing: 0.04em; margin-bottom: 8px; }
+  .cnt-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+  .cnt-pill {
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px; font-weight: 700;
+    color: var(--ink); background: #0e1636;
+    border: 1px solid var(--panel-border); border-radius: 8px; padding: 5px 11px;
+  }
+  .cnt-pill.added { color: var(--lo-color); border-color: var(--lo-color); background: rgba(249,168,38,0.12); }
+  .cnt-pill.active { color: var(--mid-color); border-color: var(--mid-color); background: rgba(91,192,235,0.14); }
+  .cnt-pill.done { color: var(--best); border-color: var(--best); background: rgba(255,209,102,0.12); }
+  .cnt-empty { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--ink-dim); }
+
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+  @media (max-width: 640px) { .chips { grid-template-columns: repeat(3, 1fr); } }
+  .chip {
+    background: #0e1636; border: 1px solid var(--panel-border);
+    border-radius: 8px; padding: 8px 6px; text-align: center;
+  }
+  .chip .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-dim); letter-spacing: 0.04em; }
+  .chip .value { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .chip.lo .value { color: var(--lo-color); }
+  .chip.hi .value { color: var(--hi-color); }
+  .chip.mid .value { color: var(--mid-color); }
+  .chip.res .value { color: var(--best); }
+
+  .code-box {
+    background: #0a1130; border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 10px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.85; overflow-x: auto;
+  }
+  .line { display: flex; padding: 0 14px; white-space: pre; border-left: 3px solid transparent; color: #a9b4d6; }
+  .line .ln { width: 26px; flex: 0 0 26px; color: #4a5580; user-select: none; }
+  .line.active { background: rgba(91, 192, 235, 0.12); border-left: 3px solid var(--accent); color: var(--ink); }
+  .line.active .ln { color: var(--accent); }
+
+  .legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--ink-dim); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Hash Map · Binary Search · O(n) build, O(log n) per query</div>
+    <h1>区间频率查询 —— 哈希表 + 二分查找分步演示</h1>
+    <div class="sub">构造函数中把每个数值出现的下标按顺序存进哈希表 pos（同一数值对应的下标天然递增，无需额外排序）。每次查询时取出 value 对应的下标数组，用 bisect_left 找到第一个不小于 left 的位置，用 bisect_right 找到第一个大于 right 的位置，两者之差就是该数值落在 [left, right] 内出现的次数。</div>
+  </header>
+
+  <div class="grid">
+
+    <div class="panel">
+      <h2>数组演示</h2>
+
+      <div class="input-row">
+        <input type="text" id="input-arr" value="12,33,4,56,22,2,34,33,22,12,34,56" maxlength="80" />
+        <button id="btn-run" class="primary">构建 pos 索引</button>
+      </div>
+      <div class="input-row">
+        <input type="text" id="input-queries" value="1,2,4;0,11,33;1,1,33" maxlength="80" />
+        <button id="btn-run-q" class="primary">运行查询</button>
+      </div>
+      <div class="cnt-label" style="margin-bottom:8px;">查询格式为 left,right,value，多个查询用分号分隔</div>
+
+      <svg class="stage-svg" viewBox="0 0 920 210" id="stage"></svg>
+
+      <div class="legend">
+        <span><i class="dot" style="background:var(--lo-color)"></i>lo</span>
+        <span><i class="dot" style="background:var(--hi-color)"></i>hi</span>
+        <span><i class="dot" style="background:var(--mid-color)"></i>mid</span>
+        <span><i class="dot" style="background:var(--best)"></i>本轮二分结束</span>
+      </div>
+
+      <div style="margin-top:14px;">
+        <span class="phase-tag" id="phase-tag">阶段</span>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">哈希表 pos（数值 : 下标列表）</div>
+        <div class="cnt-list" id="pos-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="cnt-box">
+        <div class="cnt-label">已执行的查询结果</div>
+        <div class="cnt-list" id="query-list"><span class="cnt-empty">暂无</span></div>
+      </div>
+
+      <div class="chips">
+        <div class="chip lo"><div class="label">LO</div><div class="value" id="chip-lo">-</div></div>
+        <div class="chip hi"><div class="label">HI</div><div class="value" id="chip-hi">-</div></div>
+        <div class="chip mid"><div class="label">MID</div><div class="value" id="chip-mid">-</div></div>
+        <div class="chip res"><div class="label">lo_final</div><div class="value" id="chip-lofinal">-</div></div>
+        <div class="chip res"><div class="label">hi_final</div><div class="value" id="chip-hifinal">-</div></div>
+      </div>
+
+      <div class="desc-box" id="desc-box">加载中。</div>
+
+      <div class="controls">
+        <button id="btn-reset">重置</button>
+        <button id="btn-prev">上一步</button>
+        <button id="btn-play" class="primary">播放</button>
+        <button id="btn-next">下一步</button>
+        <div class="step-counter" id="step-counter">步骤 0 / 0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>对应源代码</h2>
+      <div class="code-box" id="code-box"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const codeLines = [
+    "class RangeFreqQuery:",
+    "    def __init__(self, arr: List[int]):",
+    "        self.pos = defaultdict(list)",
+    "        for i, v in enumerate(arr):",
+    "            self.pos[v].append(i)",
+    "    def query(self, left: int, right: int, value: int) -> int:",
+    "        arr = self.pos.get(value, [])",
+    "        lo, hi = 0, len(arr)",
+    "        while lo < hi:",
+    "            mid = (lo + hi) // 2",
+    "            if arr[mid] < left:",
+    "                lo = mid + 1",
+    "            else:",
+    "                hi = mid",
+    "        lo2, hi2 = 0, len(arr)",
+    "        while lo2 < hi2:",
+    "            mid2 = (lo2 + hi2) // 2",
+    "            if arr[mid2] <= right:",
+    "                lo2 = mid2 + 1",
+    "            else:",
+    "                hi2 = mid2",
+    "        return lo2 - lo"
+  ];
+
+  function buildSteps(arr) {
+    const steps = [];
+    const pos = {};
+
+    function snapshot() {
+      const o = {};
+      for (const k in pos) o[k] = pos[k].slice();
+      return o;
+    }
+
+    steps.push({
+      type: "build-init", pos: {}, arr,
+      lines: [3],
+      desc: "初始化空的哈希表 pos。接下来遍历 arr，把每个数值出现的下标依次追加进 pos[数值]。"
+    });
+
+    arr.forEach((v, i) => {
+      if (!pos[v]) pos[v] = [];
+      pos[v].push(i);
+      steps.push({
+        type: "build", i, v, pos: snapshot(), arr,
+        lines: [4, 5],
+        desc: "arr[" + i + "] = " + v + "，把下标 " + i + " 追加进 pos[" + v + "]，现在 pos[" + v + "] = [" + pos[v].join(",") + "]。"
+      });
+    });
+
+    steps.push({
+      type: "build-done", pos: snapshot(), arr,
+      lines: [4, 5],
+      desc: "遍历结束，pos 索引构建完成，可以开始执行查询。"
+    });
+
+    return { steps, pos };
+  }
+
+  function querySteps(pos, left, right, value, qIdx, priorResults) {
+    const steps = [];
+    const positions = pos[value] ? pos[value].slice() : [];
+    const n = positions.length;
+
+    steps.push({
+      type: "query-init", qIdx, left, right, value, positions, priorResults: priorResults.slice(),
+      lines: [7, 8],
+      desc: "查询 #" + qIdx + "：left=" + left + "，right=" + right + "，value=" + value + "。取出 pos[" + value + "] = [" + positions.join(",") + "]，准备两次二分查找。"
+    });
+
+    // bisect_left(positions, left): first idx with positions[idx] >= left
+    let lo = 0, hi = n;
+    steps.push({
+      type: "lo-init", qIdx, left, right, value, positions, lo, hi,
+      lines: [8],
+      desc: "第一次二分：查找 pos[" + value + "] 中第一个不小于 left(" + left + ") 的下标。lo=0，hi=" + n + "。"
+    });
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      steps.push({
+        type: "lo-mid", qIdx, left, right, value, positions, lo, hi, mid,
+        lines: [10],
+        desc: "mid = (" + lo + "+" + hi + ")//2 = " + mid + "，positions[" + mid + "] = " + positions[mid] + "，与 left(" + left + ") 比较。"
+      });
+      if (positions[mid] < left) {
+        lo = mid + 1;
+        steps.push({
+          type: "lo-less", qIdx, left, right, value, positions, lo, hi, mid,
+          lines: [11, 12],
+          desc: "positions[" + mid + "](" + positions[mid] + ") 小于 left(" + left + ")，lo = mid+1 = " + lo + "。"
+        });
+      } else {
+        hi = mid;
+        steps.push({
+          type: "lo-geq", qIdx, left, right, value, positions, lo, hi, mid,
+          lines: [13, 14],
+          desc: "positions[" + mid + "](" + positions[mid] + ") 不小于 left(" + left + ")，收缩 hi = mid = " + hi + "。"
+        });
+      }
+    }
+    const loFinal = lo;
+    steps.push({
+      type: "lo-done", qIdx, left, right, value, positions, loFinal,
+      lines: [8],
+      desc: "第一次二分结束，lo = " + loFinal + "，即 positions 中第一个不小于 left 的位置。"
+    });
+
+    // bisect_right(positions, right): first idx with positions[idx] > right
+    let lo2 = 0, hi2 = n;
+    steps.push({
+      type: "hi-init", qIdx, left, right, value, positions, loFinal, lo: lo2, hi: hi2,
+      lines: [15],
+      desc: "第二次二分：查找 pos[" + value + "] 中第一个大于 right(" + right + ") 的下标。lo2=0，hi2=" + n + "。"
+    });
+    while (lo2 < hi2) {
+      const mid2 = Math.floor((lo2 + hi2) / 2);
+      steps.push({
+        type: "hi-mid", qIdx, left, right, value, positions, loFinal, lo: lo2, hi: hi2, mid: mid2,
+        lines: [17],
+        desc: "mid2 = (" + lo2 + "+" + hi2 + ")//2 = " + mid2 + "，positions[" + mid2 + "] = " + positions[mid2] + "，与 right(" + right + ") 比较。"
+      });
+      if (positions[mid2] <= right) {
+        lo2 = mid2 + 1;
+        steps.push({
+          type: "hi-less", qIdx, left, right, value, positions, loFinal, lo: lo2, hi: hi2, mid: mid2,
+          lines: [18, 19],
+          desc: "positions[" + mid2 + "](" + positions[mid2] + ") 不大于 right(" + right + ")，lo2 = mid2+1 = " + lo2 + "。"
+        });
+      } else {
+        hi2 = mid2;
+        steps.push({
+          type: "hi-geq", qIdx, left, right, value, positions, loFinal, lo: lo2, hi: hi2, mid: mid2,
+          lines: [20, 21],
+          desc: "positions[" + mid2 + "](" + positions[mid2] + ") 大于 right(" + right + ")，收缩 hi2 = mid2 = " + hi2 + "。"
+        });
+      }
+    }
+    const hiFinal = lo2;
+    const count = hiFinal - loFinal;
+
+    steps.push({
+      type: "query-done", qIdx, left, right, value, positions, loFinal, hiFinal, count,
+      lines: [22],
+      desc: "第二次二分结束，lo2 = " + hiFinal + "。查询结果 = lo2 - lo = " + hiFinal + " - " + loFinal + " = " + count + "。"
+    });
+
+    return { steps, count };
+  }
+
+  // ---- code panel (static) ----
+  const codeBox = document.getElementById("code-box");
+  codeLines.forEach((text, i) => {
+    const row = document.createElement("div");
+    row.className = "line";
+    row.id = "line-" + (i + 1);
+    row.innerHTML = '<span class="ln">' + (i + 1) + '</span><span class="code">' + text.replace(/</g, "&lt;") + "</span>";
+    codeBox.appendChild(row);
+  });
+
+  function highlightLines(lines) {
+    codeLines.forEach((_, i) => {
+      document.getElementById("line-" + (i + 1)).classList.remove("active");
+    });
+    lines.forEach((ln) => {
+      const el = document.getElementById("line-" + ln);
+      if (el) el.classList.add("active");
+    });
+  }
+
+  // ---- dynamic state ----
+  let arr = [12, 33, 4, 56, 22, 2, 34, 33, 22, 12, 34, 56];
+  let pos = {};
+  let steps = [];
+  let current = 0;
+  let playTimer = null;
+  let queryResults = [];
+
+  function initBuild() {
+    const built = buildSteps(arr);
+    steps = built.steps;
+    pos = built.pos;
+    queryResults = [];
+    current = 0;
+    render();
+  }
+
+  function runQueries(queryStr) {
+    if (!steps.length || steps[steps.length - 1].type !== "build-done") {
+      // ensure build has happened
+      const built = buildSteps(arr);
+      steps = built.steps;
+      pos = built.pos;
+    } else {
+      steps = [steps[steps.length - 1]];
+    }
+    queryResults = [];
+    const groups = queryStr.split(";").map(s => s.trim()).filter(Boolean);
+    groups.forEach((g, idx) => {
+      const parts = g.split(",").map(v => parseInt(v.trim(), 10));
+      if (parts.length !== 3 || parts.some(isNaN)) return;
+      const [left, right, value] = parts;
+      const { steps: qs, count } = querySteps(pos, left, right, value, idx, queryResults);
+      steps.push(...qs);
+      queryResults.push({ left, right, value, count });
+    });
+    steps.push({
+      type: "final", results: queryResults.slice(),
+      lines: [22],
+      desc: "全部查询执行完毕，结果依次为：" + queryResults.map(r => r.count).join(", ") + "。"
+    });
+    current = 0;
+    render();
+  }
+
+  function renderStage(step) {
+    let boxes = [];
+    let title = "";
+
+    if (step.type === "build-init" || step.type === "build" || step.type === "build-done") {
+      boxes = step.arr;
+      title = "arr 原数组";
+    } else {
+      boxes = step.positions || [];
+      title = "pos[" + step.value + "] 下标数组";
+    }
+
+    const n = boxes.length || 1;
+    const parts = [];
+    const boxSize = Math.min(56, Math.floor(880 / n) - 6);
+    const gap = 8;
+    const totalW = n * (boxSize + gap) - gap;
+    const startX = (920 - totalW) / 2;
+    const boxY = 70;
+
+    function bx(idx) { return startX + idx * (boxSize + gap); }
+
+    parts.push('<text x="460" y="30" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="var(--ink-dim)" text-anchor="middle">' + title + '</text>');
+
+    const lo = step.lo, hi = step.hi, mid = step.mid;
+    const isBuildPhase = step.type === "build-init" || step.type === "build" || step.type === "build-done";
+    const rangeActive = !isBuildPhase && lo !== undefined && hi !== undefined && step.type !== "query-init" && step.type !== "query-done";
+    const rangeNonEmpty = rangeActive && lo < hi;
+
+    if (rangeNonEmpty) {
+      const hiIdx = Math.min(hi - 1, n - 1);
+      const b0 = bx(lo) - gap / 2;
+      const b1 = bx(hiIdx) + boxSize + gap / 2;
+      const bandColor = step.type.startsWith("hi") ? "rgba(61,220,151,0.14)" : "var(--window-soft)";
+      const bandStroke = step.type.startsWith("hi") ? "var(--hi-color)" : "var(--mid-color)";
+      parts.push(
+        '<rect x="' + b0 + '" y="' + (boxY - 10) + '" width="' + (b1 - b0) + '" height="' + (boxSize + 20) +
+        '" rx="10" fill="' + bandColor + '" stroke="' + bandStroke + '" stroke-width="1.6" stroke-dasharray="6,4"/>'
+      );
+    }
+
+    for (let idx = 0; idx < n; idx++) {
+      const x0 = bx(idx);
+      const val = boxes[idx];
+      const inRange = rangeNonEmpty && idx >= lo && idx < hi;
+      const isLo = rangeActive && idx === lo && lo < n;
+      const isHiEdge = rangeActive && idx === hi - 1 && hi - 1 >= 0 && hi <= n;
+      const isMid = mid !== undefined && idx === mid && !isBuildPhase;
+
+      let fill = (isBuildPhase || inRange) ? "var(--box)" : "var(--box-dim)";
+      let opacity = (isBuildPhase || inRange) ? "1" : "0.42";
+      let stroke = "#2c3766", strokeWidth = "1";
+
+      if (step.type === "build" && idx === step.i) { fill = "rgba(249,168,38,0.18)"; stroke = "var(--lo-color)"; strokeWidth = "3"; opacity = "1"; }
+      else if (isMid && (step.type === "lo-geq" || step.type === "hi-geq")) { fill = "rgba(255,209,102,0.18)"; stroke = "var(--best)"; strokeWidth = "3"; opacity = "1"; }
+      else if (isMid && (step.type === "lo-less" || step.type === "hi-less")) { fill = "rgba(249,110,110,0.12)"; stroke = "var(--over)"; strokeWidth = "2.5"; opacity = "1"; }
+      else if (isMid && (step.type === "lo-mid" || step.type === "hi-mid")) { stroke = "var(--mid-color)"; strokeWidth = "2.5"; }
+      else if (isLo && isHiEdge) { stroke = "var(--mid-color)"; strokeWidth = "2.5"; }
+      else if (isLo) { stroke = "var(--lo-color)"; strokeWidth = "2.5"; }
+      else if (isHiEdge) { stroke = "var(--hi-color)"; strokeWidth = "2.5"; }
+
+      if (step.type === "query-done" && idx >= step.loFinal && idx < step.hiFinal) {
+        fill = "rgba(255,209,102,0.18)"; stroke = "var(--best)"; opacity = "1";
+      }
+
+      parts.push(
+        '<rect x="' + x0 + '" y="' + boxY + '" width="' + boxSize + '" height="' + boxSize +
+        '" rx="8" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + strokeWidth + '" opacity="' + opacity + '"/>'
+      );
+      parts.push(
+        '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize / 2 + 6) + '" font-family="JetBrains Mono, monospace" font-size="' + Math.min(18, boxSize * 0.4) +
+        '" font-weight="700" fill="var(--ink)" text-anchor="middle" opacity="' + opacity + '">' + (val !== undefined ? val : "") + '</text>'
+      );
+      parts.push(
+        '<text x="' + (x0 + boxSize / 2) + '" y="' + (boxY + boxSize + 14) + '" font-family="JetBrains Mono, monospace" font-size="9" fill="var(--ink-dim)" text-anchor="middle">' + idx + '</text>'
+      );
+    }
+
+    if (rangeActive) {
+      const ay = boxY + boxSize + 32;
+      if (lo < n) {
+        const lox = bx(lo) + boxSize / 2;
+        parts.push('<text x="' + lox + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="var(--lo-color)" text-anchor="middle">▲</text>');
+      }
+      if (hi - 1 >= 0 && hi - 1 !== lo && hi <= n) {
+        const hix = bx(hi - 1) + boxSize / 2;
+        parts.push('<text x="' + hix + '" y="' + ay + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="var(--hi-color)" text-anchor="middle">▲</text>');
+      }
+      if (mid !== undefined && !isBuildPhase) {
+        const midx = bx(mid) + boxSize / 2;
+        parts.push('<text x="' + midx + '" y="' + (ay + 16) + '" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" fill="var(--mid-color)" text-anchor="middle">▲</text>');
+      }
+    }
+
+    if (step.type === "final") {
+      parts.push('<rect x="280" y="' + (boxY + 8) + '" width="360" height="34" rx="17" fill="rgba(255,209,102,0.10)" stroke="var(--best)" stroke-width="1.3"/>');
+      parts.push('<text x="460" y="' + (boxY + 30) + '" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" fill="var(--best)" text-anchor="middle">全部查询结果 = [' + step.results.map(r => r.count).join(",") + ']</text>');
+    }
+
+    document.getElementById("stage").innerHTML = parts.join("");
+  }
+
+  function renderPos(step) {
+    const container = document.getElementById("pos-list");
+    const posObj = step.pos || pos;
+    const keys = Object.keys(posObj || {});
+    if (keys.length === 0) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = keys.map((key) => {
+      let cls = "";
+      if (step.type === "build" && String(step.v) === key) cls = " added";
+      if (step.value !== undefined && String(step.value) === key && step.type !== "build" && step.type !== "build-init" && step.type !== "build-done") cls = " active";
+      return '<span class="cnt-pill' + cls + '">' + key + " : [" + posObj[key].join(",") + "]</span>";
+    }).join("");
+  }
+
+  function renderQueryList(step) {
+    const container = document.getElementById("query-list");
+    const list = (step.type === "final") ? step.results : (step.priorResults || queryResults);
+    if (!list || list.length === 0) {
+      container.innerHTML = '<span class="cnt-empty">暂无</span>';
+      return;
+    }
+    container.innerHTML = list.map((r) => '<span class="cnt-pill done">query(' + r.left + "," + r.right + "," + r.value + ") = " + r.count + "</span>").join("");
+  }
+
+  function render() {
+    if (!steps.length) return;
+    const step = steps[current];
+
+    renderStage(step);
+    highlightLines(step.lines);
+    renderPos(step);
+    renderQueryList(step);
+
+    const tag = document.getElementById("phase-tag");
+    if (step.type && step.type.startsWith("build")) {
+      tag.textContent = "阶段：构建 pos 索引";
+      tag.className = "phase-tag build";
+    } else if (step.type && step.type.startsWith("lo")) {
+      tag.textContent = "查询 #" + step.qIdx + "：第一次二分（bisect_left）";
+      tag.className = "phase-tag lo";
+    } else if (step.type && step.type.startsWith("hi")) {
+      tag.textContent = "查询 #" + step.qIdx + "：第二次二分（bisect_right）";
+      tag.className = "phase-tag hi";
+    } else if (step.type === "query-init" || step.type === "query-done") {
+      tag.textContent = "查询 #" + step.qIdx;
+      tag.className = "phase-tag";
+    } else {
+      tag.textContent = "结果";
+      tag.className = "phase-tag";
+    }
+
+    document.getElementById("chip-lo").textContent = step.lo !== undefined ? step.lo : "—";
+    document.getElementById("chip-hi").textContent = step.hi !== undefined ? step.hi : "—";
+    document.getElementById("chip-mid").textContent = step.mid !== undefined ? step.mid : "—";
+    document.getElementById("chip-lofinal").textContent = step.loFinal !== undefined ? step.loFinal : "—";
+    document.getElementById("chip-hifinal").textContent = step.hiFinal !== undefined ? step.hiFinal : "—";
+
+    document.getElementById("desc-box").textContent = step.desc;
+    document.getElementById("step-counter").textContent = "步骤 " + current + " / " + (steps.length - 1);
+
+    document.getElementById("btn-prev").disabled = current === 0;
+    document.getElementById("btn-next").disabled = current === steps.length - 1;
+  }
+
+  function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; document.getElementById("btn-play").textContent = "播放"; }
+  }
+
+  document.getElementById("btn-run").addEventListener("click", () => {
+    stopPlay();
+    const parsed = document.getElementById("input-arr").value.split(",").map(v => parseInt(v.trim(), 10)).filter(v => !isNaN(v));
+    arr = parsed.length ? parsed : [0];
+    initBuild();
+  });
+
+  document.getElementById("btn-run-q").addEventListener("click", () => {
+    stopPlay();
+    runQueries(document.getElementById("input-queries").value);
+  });
+
+  document.getElementById("input-arr").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("btn-run").click();
+  });
+  document.getElementById("input-queries").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("btn-run-q").click();
+  });
+
+  document.getElementById("btn-next").addEventListener("click", () => {
+    if (current < steps.length - 1) { current++; render(); }
+    if (current === steps.length - 1) stopPlay();
+  });
+  document.getElementById("btn-prev").addEventListener("click", () => {
+    stopPlay(); if (current > 0) { current--; render(); }
+  });
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    stopPlay(); current = 0; render();
+  });
+  document.getElementById("btn-play").addEventListener("click", () => {
+    if (playTimer) { stopPlay(); return; }
+    document.getElementById("btn-play").textContent = "暂停";
+    playTimer = setInterval(() => {
+      if (current < steps.length - 1) { current++; render(); } else stopPlay();
+    }, 1200);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (document.activeElement && ["input-arr", "input-queries"].includes(document.activeElement.id)) return;
+    if (e.key === "ArrowRight") document.getElementById("btn-next").click();
+    if (e.key === "ArrowLeft") document.getElementById("btn-prev").click();
+  });
+
+  initBuild();
+  runQueries(document.getElementById("input-queries").value);
+})();
+</script>
+</body>
+</html>
